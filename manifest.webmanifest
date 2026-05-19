@@ -1,12 +1,12 @@
 {
   "name": "Film Room",
   "short_name": "Film Room",
-  "description": "Film Room fantasy football draft command center.",
+  "description": "Broadcast-style fantasy football draft command center with Film Room scoring and player intel.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#090d17",
-  "theme_color": "#090d17",
+  "background_color": "#070a12",
+  "theme_color": "#070a12",
   "orientation": "portrait-primary",
   "icons": [
     {
