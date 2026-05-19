@@ -73,3 +73,6 @@ Added Positional Scarcity Visualizer, Drop-Off Analysis, Story Behind the Score,
 
 ## v5 Phase 1 Product Cleanup
 Removed prototype/developer copy, tightened section heroes, simplified Settings, added brand typography, reduced visual noise, shortened toasts, renamed Buzz Lens to Market Buzz, and kept existing draft tools stable.
+
+
+v5 Phase 2: added Player Intel architecture, curated starter scouting reports, richer fallbacks, ESPN latest news panel, and handcuff quick reference.
