@@ -1,14 +1,26 @@
 {
-  "name": "Gridiron Intel",
-  "short_name": "Gridiron",
-  "description": "Fantasy football draft command center with Scout Network fan intel with proxy hardening",
+  "name": "Film Room",
+  "short_name": "Film Room",
+  "description": "Film Room fantasy football draft command center with Scout Network visuals and Netlify-ready Reddit proxy support.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#0a0e17",
-  "theme_color": "#0a0e17",
+  "background_color": "#090d17",
+  "theme_color": "#090d17",
   "orientation": "portrait-primary",
   "icons": [
+    {
+      "src": "./assets/logo/logo-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./assets/logo/logo-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
     {
       "src": "icon.svg",
       "sizes": "any",

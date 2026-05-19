@@ -1,5 +1,5 @@
-const CACHE_NAME = 'gridiron-intel-v4-film-room-a-proxy-hardening-v2';
-const SHELL_FILES = ['./','./index.html','./manifest.webmanifest','./icon.svg'];
+const CACHE_NAME = 'film-room-v4-1-visual-cleanup';
+const SHELL_FILES = ['./','./index.html','./manifest.webmanifest','./icon.svg','./assets/logo/logo-icon-192.png','./assets/logo/logo-icon-512.png'];
 
 self.addEventListener('install', event => {
   event.waitUntil(
