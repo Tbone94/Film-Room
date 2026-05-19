@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0e17" />
+  <meta name="description" content="Gridiron Intel fantasy football draft command center" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <title>Gridiron Intel — Film Room Phase A Proxy Hardening</title>
+  <link rel="preconnect" href="https://api.sleeper.app" />
+  <link rel="preconnect" href="https://sleepercdn.com" />
+  <link rel="preconnect" href="https://a.espncdn.com" />
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    :root{
+      --bg-primary:#0a0e17;
+      --bg-secondary:#111827;
+      --bg-panel:rgba(17,24,39,.86);
+      --bg-card:rgba(26,35,50,.88);
+      --bg-card-solid:#1a2332;
+      --bg-hover:#243044;
+      --pos-qb:#ef4444;
+      --pos-rb:#22c55e;
+      --pos-wr:#3b82f6;
+      --pos-te:#f59e0b;
+      --pos-k:#a855f7;
+      --pos-def:#6b7280;
+      --accent-gold:#fbbf24;
+      --accent-green:#10b981;
+      --accent-red:#ef4444;
+      --accent-blue:#60a5fa;
+      --accent-purple:#a78bfa;
+      --text-primary:#f1f5f9;
+      --text-secondary:#94a3b8;
+      --text-muted:#64748b;
+      --border:rgba(148,163,184,.16);
+      --border-hi:rgba(148,163,184,.34);
+      --shadow:0 24px 60px rgba(0,0,0,.34);
+      --radius-xl:26px;
+      --radius-lg:20px;
+      --radius-md:14px;
+      --bottom:86px;
+    }
+    *{box-sizing:border-box}
+    html,body,#root{height:100%}
+    html{background:var(--bg-primary)}
+    body{margin:0;color:var(--text-primary);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow:hidden;background:radial-gradient(circle at 12% 0%,rgba(59,130,246,.22),transparent 35%),radial-gradient(circle at 92% 8%,rgba(251,191,36,.13),transparent 32%),linear-gradient(135deg,#070a12 0%,#0a0e17 47%,#111827 100%)}
+    body:before{content:"";pointer-events:none;position:fixed;inset:0;background-image:linear-gradient(rgba(255,255,255,.032) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.032) 1px,transparent 1px),repeating-linear-gradient(0deg,rgba(255,255,255,.018),rgba(255,255,255,.018) 1px,transparent 1px,transparent 5px);background-size:44px 44px,44px 44px,100% 5px;opacity:.42;mix-blend-mode:screen;z-index:0}
+    button,input,select,textarea{font:inherit}
+    button{cursor:pointer}
+    button:disabled{cursor:not-allowed;opacity:.55}
+    .app{position:relative;height:100%;display:flex;flex-direction:column;z-index:1}
+    .topbar{position:sticky;top:0;z-index:9;padding:max(14px,env(safe-area-inset-top)) 14px 12px;background:linear-gradient(180deg,rgba(10,14,23,.98),rgba(10,14,23,.86));border-bottom:1px solid var(--border);backdrop-filter:blur(18px)}
+    .brand-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+    .brand{display:flex;align-items:center;gap:10px;min-width:0}
+    .brand-mark{width:44px;height:44px;flex:0 0 auto;border-radius:15px;display:grid;place-items:center;background:linear-gradient(145deg,rgba(251,191,36,.98),rgba(239,68,68,.68));box-shadow:0 0 30px rgba(251,191,36,.2);color:#0a0e17;font-weight:1000;letter-spacing:-.05em}
+    .brand h1{margin:0;font-size:clamp(1.05rem,4vw,1.55rem);letter-spacing:.02em;text-transform:uppercase;line-height:.95;white-space:nowrap}
+    .brand p{margin:4px 0 0;color:var(--text-secondary);font-size:.77rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62vw}
+    .actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+    .icon-btn,.primary-btn,.ghost-btn,.danger-btn,.chip,.view-toggle button,.mini-btn,.tag-btn{border:1px solid var(--border-hi);color:var(--text-primary);background:rgba(17,24,39,.84);border-radius:999px;transition:transform .15s ease,border-color .15s ease,background .15s ease,box-shadow .15s ease}
+    .icon-btn{width:42px;height:42px;display:grid;place-items:center;font-size:1rem;flex:0 0 auto}
+    .primary-btn,.ghost-btn,.danger-btn,.mini-btn{padding:10px 13px;font-weight:850;font-size:.85rem;line-height:1.05;text-align:center}
+    .mini-btn{padding:7px 10px;font-size:.76rem}
+    .primary-btn{color:#101827;background:linear-gradient(135deg,var(--accent-gold),#fde68a);border-color:rgba(251,191,36,.58)}
+    .danger-btn{background:rgba(239,68,68,.14);border-color:rgba(239,68,68,.35);color:#fecaca}
+    .ghost-btn:hover,.icon-btn:hover,.chip:hover,.view-toggle button:hover,.mini-btn:hover,.tag-btn:hover{transform:translateY(-1px);border-color:rgba(251,191,36,.55);background:rgba(36,48,68,.92)}
+    .search-row{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+    .search-wrap{position:relative}
+    .search-wrap span{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text-muted);pointer-events:none}
+    .search-input,.select-input,.textarea,.small-input{width:100%;border:1px solid var(--border-hi);color:var(--text-primary);background:rgba(15,23,42,.92);border-radius:16px;padding:12px;outline:none}
+    .search-input{padding-left:40px}
+    .textarea{min-height:118px;resize:vertical;line-height:1.45}
+    .small-input{padding:9px 11px;border-radius:12px}
+    .search-input:focus,.select-input:focus,.textarea:focus,.small-input:focus{border-color:var(--accent-blue);box-shadow:0 0 0 3px rgba(96,165,250,.14)}
+    .progress{height:7px;border-radius:999px;background:rgba(15,23,42,.94);border:1px solid var(--border);overflow:hidden}
+    .progress span{display:block;height:100%;width:var(--w);background:linear-gradient(90deg,var(--accent-blue),var(--accent-gold));transition:width .25s ease}
+    .main{flex:1;overflow-y:auto;padding:14px 14px calc(var(--bottom) + 18px + env(safe-area-inset-bottom));scroll-behavior:smooth;-webkit-overflow-scrolling:touch}
+    .hero-card,.panel,.player-card,.deep-card,.placeholder-card,.trade-card,.rank-card,.draft-card,.cheat-card,.empty-card,.notice-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow);backdrop-filter:blur(14px)}
+    .hero-card{overflow:hidden;position:relative;padding:18px;margin-bottom:14px}
+    .hero-card:after{content:"";position:absolute;inset:0;background:linear-gradient(120deg,rgba(251,191,36,.08),transparent 44%,rgba(96,165,250,.12));pointer-events:none}
+    .hero-content{position:relative;z-index:1;display:grid;gap:11px}
+    .kicker{text-transform:uppercase;letter-spacing:.14em;color:var(--accent-gold);font-weight:950;font-size:.72rem}
+    .hero-card h2,.deep-header h2{margin:0;font-size:clamp(1.45rem,6vw,2.35rem);line-height:.95;text-transform:uppercase}
+    .hero-card p,.placeholder-card p,.deep-card p,.settings-drawer p,.draft-card p,.empty-card p,.notice-card p{color:var(--text-secondary);line-height:1.5;margin:0}
+    .status-row,.quick-stats,.mini-grid,.draft-grid,.settings-grid,.split-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .stat-tile{padding:11px;border-radius:16px;background:rgba(15,23,42,.72);border:1px solid var(--border);min-width:0}
+    .stat-tile strong{display:block;font-size:1.05rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .stat-tile span{display:block;color:var(--text-secondary);font-size:.76rem;margin-top:2px}
+    .toolbar{display:grid;gap:10px;margin-bottom:14px}
+    .filter-scroll{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 6px;scrollbar-width:none}
+    .filter-scroll::-webkit-scrollbar{display:none}
+    .chip{padding:9px 12px;font-weight:900;font-size:.78rem;white-space:nowrap;flex:0 0 auto}
+    .chip.active{color:#101827;background:linear-gradient(135deg,var(--accent-gold),#fde68a);border-color:rgba(251,191,36,.7)}
+    .chip.good{border-color:rgba(16,185,129,.4);background:rgba(16,185,129,.12)}
+    .chip.bad{border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.12)}
+    .chip.purple{border-color:rgba(167,139,250,.4);background:rgba(167,139,250,.12)}
+    .control-grid{display:grid;grid-template-columns:1fr;gap:10px}
+    .view-toggle{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .view-toggle button{padding:11px;font-weight:900}
+    .view-toggle button.active{background:rgba(96,165,250,.18);border-color:rgba(96,165,250,.55)}
+    .players-grid{display:grid;grid-template-columns:1fr;gap:12px}
+    .player-card{position:relative;overflow:hidden;padding:12px;border-left:4px solid var(--accent-blue);display:grid;grid-template-columns:70px minmax(0,1fr);gap:12px;min-height:148px}
+    .player-card.drafted{opacity:.56;filter:saturate(.68)}
+    .player-card:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 100% 0%,rgba(255,255,255,.08),transparent 34%);pointer-events:none}
+    .card-body{position:relative;z-index:1;min-width:0}
+    .card-title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+    .player-card h3{margin:0;font-size:1.02rem;line-height:1.05;word-break:break-word}
+    .meta{color:var(--text-secondary);font-size:.78rem;margin-top:4px}
+    .headshot-wrap{width:70px;height:70px;border-radius:18px;overflow:hidden;border:2px solid var(--border-hi);background:rgba(15,23,42,.86);display:grid;place-items:center;position:relative;z-index:1}
+    .headshot-wrap img{width:100%;height:100%;object-fit:cover}
+    .initials{font-weight:1000;font-size:1.15rem}
+    .team-logo{width:28px;height:28px;object-fit:contain;opacity:.95;flex:0 0 auto}
+    .score-line{display:flex;align-items:center;gap:8px;margin-top:9px}
+    .scorebar{height:8px;flex:1;background:rgba(15,23,42,.9);border:1px solid var(--border);border-radius:999px;overflow:hidden}
+    .scorebar span{display:block;height:100%;width:var(--w);background:linear-gradient(90deg,var(--accent-green),var(--accent-gold));border-radius:999px;transition:width .45s ease}
+    .score-badge{min-width:42px;text-align:center;font-weight:1000;color:#101827;background:var(--accent-gold);border-radius:999px;padding:4px 7px;font-size:.82rem}
+    .card-footer{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+    .pill{display:inline-flex;align-items:center;gap:4px;padding:5px 8px;border-radius:999px;background:rgba(15,23,42,.78);border:1px solid var(--border);color:var(--text-secondary);font-size:.72rem;font-weight:850;line-height:1.1}
+    .pill.good{color:#bbf7d0;border-color:rgba(16,185,129,.35);background:rgba(16,185,129,.12)}
+    .pill.bad{color:#fecaca;border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.12)}
+    .pill.gold{color:#fde68a;border-color:rgba(251,191,36,.35);background:rgba(251,191,36,.12)}
+    .pill.blue{color:#bfdbfe;border-color:rgba(96,165,250,.35);background:rgba(96,165,250,.12)}
+    .tag-row{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+    .tag-btn{padding:6px 8px;font-size:.72rem;font-weight:900;color:var(--text-secondary)}
+    .tag-btn.active{color:#101827;background:linear-gradient(135deg,var(--accent-gold),#fde68a);border-color:rgba(251,191,36,.65)}
+    .section-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 10px}
+    .section-title h3{margin:0;text-transform:uppercase;font-size:1rem;letter-spacing:.05em}
+    .panel,.deep-card,.trade-card,.rank-card,.draft-card,.cheat-card,.empty-card,.notice-card{padding:14px;margin-bottom:14px}
+    .draft-card{border-color:rgba(251,191,36,.28);background:linear-gradient(135deg,rgba(251,191,36,.10),rgba(26,35,50,.88) 42%,rgba(96,165,250,.10))}
+    .draft-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+    .timer{font-size:1.55rem;font-weight:1000;letter-spacing:.04em;color:#fde68a}
+    .needs-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+    .table-wrap{overflow:auto;border-radius:18px;border:1px solid var(--border)}
+    table{width:100%;border-collapse:collapse;min-width:760px;background:rgba(15,23,42,.64)}
+    th,td{text-align:left;padding:11px 10px;border-bottom:1px solid var(--border);font-size:.84rem;vertical-align:middle}
+    th{color:#cbd5e1;background:rgba(15,23,42,.88);position:sticky;top:0;z-index:1}
+    tr:hover td{background:rgba(96,165,250,.06)}
+    .deep-header{display:grid;grid-template-columns:92px minmax(0,1fr);gap:14px;align-items:center;margin-bottom:14px}
+    .deep-photo{width:92px;height:92px;border-radius:24px;overflow:hidden;border:2px solid var(--border-hi);display:grid;place-items:center;background:rgba(15,23,42,.9)}
+    .deep-photo img{width:100%;height:100%;object-fit:cover}
+    .grade-row{display:grid;grid-template-columns:120px 1fr 42px;gap:8px;align-items:center;margin:10px 0}
+    .grade-row label{font-size:.78rem;color:var(--text-secondary);font-weight:800}
+    .recommend-box{padding:14px;border-radius:18px;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.3);line-height:1.45}
+    .bullet-list{margin:0;padding-left:18px;color:var(--text-secondary);line-height:1.52}
+    .bullet-list li{margin:7px 0}
+    .heatmap{display:grid;grid-template-columns:repeat(6,1fr);gap:7px;margin-top:10px}
+    .week-box{padding:9px 4px;border-radius:12px;text-align:center;border:1px solid var(--border);background:rgba(15,23,42,.74);font-size:.74rem;font-weight:900}
+    .week-box.easy{background:rgba(16,185,129,.16);border-color:rgba(16,185,129,.32);color:#bbf7d0}
+    .week-box.mid{background:rgba(251,191,36,.13);border-color:rgba(251,191,36,.28);color:#fde68a}
+    .week-box.hard{background:rgba(239,68,68,.14);border-color:rgba(239,68,68,.32);color:#fecaca}
+    .trade-sides{display:grid;grid-template-columns:1fr;gap:12px}
+    .trade-pool{display:grid;gap:8px;max-height:320px;overflow:auto;padding-right:4px}
+    .trade-chip,.rank-item,.roster-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px;border-radius:16px;background:rgba(15,23,42,.72);border:1px solid var(--border)}
+    .rank-list{display:grid;gap:8px}
+    .rank-item{border-left:4px solid var(--accent-blue)}
+    .rank-item.dragging{opacity:.45}
+    .drag-handle{font-size:1.2rem;color:var(--text-muted);padding-right:2px}
+    .bottom-nav{position:fixed;left:0;right:0;bottom:0;z-index:12;display:grid;grid-template-columns:repeat(5,1fr);gap:5px;padding:8px 10px max(8px,env(safe-area-inset-bottom));background:linear-gradient(180deg,rgba(10,14,23,.66),rgba(10,14,23,.98));border-top:1px solid var(--border);backdrop-filter:blur(18px)}
+    .nav-btn{border:1px solid transparent;background:transparent;color:var(--text-secondary);border-radius:18px;padding:8px 3px;font-size:.72rem;font-weight:900;display:grid;gap:2px;place-items:center}
+    .nav-btn b{font-size:1.1rem}
+    .nav-btn.active{color:#101827;background:linear-gradient(135deg,var(--accent-gold),#fde68a);border-color:rgba(251,191,36,.55)}
+    .settings-backdrop{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.58);display:flex;justify-content:flex-end;backdrop-filter:blur(5px)}
+    .settings-drawer{width:min(560px,100%);height:100%;overflow:auto;background:linear-gradient(180deg,#0b1020,#111827);border-left:1px solid var(--border-hi);padding:18px;box-shadow:-30px 0 80px rgba(0,0,0,.42)}
+    .settings-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:16px}
+    .settings-head h2{margin:0;font-size:1.55rem;text-transform:uppercase}
+    .drawer-section{border:1px solid var(--border);background:rgba(15,23,42,.66);border-radius:20px;padding:14px;margin-bottom:12px}
+    .drawer-section h3{margin:0 0 9px;text-transform:uppercase;font-size:.92rem;letter-spacing:.05em}
+    .field{display:grid;gap:6px;margin-top:10px}
+    .field label{font-size:.76rem;color:var(--text-secondary);font-weight:900;text-transform:uppercase;letter-spacing:.04em}
+    .toast{position:fixed;left:50%;bottom:calc(var(--bottom) + 12px);transform:translateX(-50%);z-index:40;max-width:min(92vw,520px);background:#0f172a;color:#fff;border:1px solid rgba(251,191,36,.35);box-shadow:var(--shadow);border-radius:999px;padding:12px 16px;font-weight:900;text-align:center}
+    .empty-card{text-align:center;padding:22px}
+    .empty-card strong{display:block;font-size:1.1rem;margin-bottom:5px}
+
+    .fan-intel-card{border-color:rgba(96,165,250,.28);background:linear-gradient(135deg,rgba(96,165,250,.11),rgba(26,35,50,.88) 45%,rgba(251,191,36,.08))}
+    .sentiment-meter{height:11px;border-radius:999px;background:rgba(15,23,42,.9);border:1px solid var(--border);overflow:hidden;margin:10px 0}
+    .sentiment-meter span{display:block;height:100%;width:var(--w);margin-left:var(--offset);background:linear-gradient(90deg,#ef4444,#94a3b8,#22c55e);border-radius:999px;transition:all .25s ease}
+    .intel-post{display:block;text-decoration:none;color:var(--text-primary);padding:11px;border-radius:16px;background:rgba(15,23,42,.62);border:1px solid var(--border);margin:8px 0}
+    .intel-post:hover{border-color:rgba(251,191,36,.45);background:rgba(36,48,68,.72)}
+    .intel-post small{display:block;color:var(--text-secondary);margin-top:4px;line-height:1.35}
+    .intel-alert{padding:11px;border-radius:16px;background:rgba(251,191,36,.10);border:1px solid rgba(251,191,36,.26);margin:8px 0;line-height:1.4}
+    .intel-alert.bad{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.3)}
+    .intel-alert.good{background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.3)}
+    .source-row{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+    .print-sheet{display:none}
+    @media (min-width:640px){
+      .search-row{grid-template-columns:minmax(0,1fr) 180px;align-items:center}
+      .control-grid{grid-template-columns:1.2fr 1fr .9fr}
+      .players-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .trade-sides{grid-template-columns:1fr 1fr}
+      .split-grid{grid-template-columns:1fr 1fr}
+      .settings-grid{grid-template-columns:repeat(3,1fr)}
+    }
+    @media (min-width:980px){
+      .main{padding-left:24px;padding-right:24px}
+      .players-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+      .deep-layout{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(320px,.9fr);gap:14px;align-items:start}
+      .deep-layout .deep-card{margin-bottom:0}
+    }
+    @media (max-width:420px){
+      .brand-mark{width:39px;height:39px;border-radius:13px}
+      .icon-btn{width:39px;height:39px}
+      .player-card{grid-template-columns:62px minmax(0,1fr);gap:10px;padding:11px}
+      .headshot-wrap{width:62px;height:62px;border-radius:16px}
+      .status-row,.quick-stats,.mini-grid,.draft-grid{grid-template-columns:1fr 1fr;gap:8px}
+      .grade-row{grid-template-columns:92px 1fr 34px}
+      .heatmap{grid-template-columns:repeat(3,1fr)}
+      .topbar{padding-left:10px;padding-right:10px}
+      .main{padding-left:10px;padding-right:10px}
+    }
+    @media print{
+      body{background:white;color:#111;overflow:visible}
+      .app > *:not(.print-sheet){display:none!important}
+      .print-sheet{display:block;padding:24px;color:#111;background:white;font-family:Arial,sans-serif}
+      .print-sheet h1,.print-sheet h2{margin:0 0 10px}
+      .print-sheet table{min-width:0;color:#111;background:white;border:1px solid #ddd}
+      .print-sheet th,.print-sheet td{color:#111;border:1px solid #ddd;font-size:11px;padding:6px}
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+const {useEffect,useMemo,useState} = React;
+const APP_VERSION = "4.0-film-room-a";
+const CACHE_PLAYERS = "gridironIntel.players.v35";
+const CACHE_TRENDS = "gridironIntel.trends.v35";
+const CACHE_USER = "gridironIntel.user.v35";
+const CACHE_REDDIT = "gridironIntel.redditScout.v1";
+const MAX_PLAYER_CACHE_MS = 24 * 60 * 60 * 1000;
+const MAX_TREND_CACHE_MS = 2 * 60 * 60 * 1000;
+const POSITIONS = ["ALL","QB","RB","WR","TE","K","DEF"];
+const TAGS = [
+  {key:"target",label:"🎯 Target"},
+  {key:"sleeper",label:"💤 Sleeper"},
+  {key:"bust",label:"⛔ Bust"},
+  {key:"avoid",label:"🚫 Avoid"},
+  {key:"drafted",label:"✅ Drafted"},
+];
+
+const SUBREDDIT_MAP = {
+  ARI:{sub:"AZCardinals",name:"Arizona Cardinals"}, ATL:{sub:"falcons",name:"Atlanta Falcons"}, BAL:{sub:"ravens",name:"Baltimore Ravens"}, BUF:{sub:"buffalobills",name:"Buffalo Bills"}, CAR:{sub:"panthers",name:"Carolina Panthers"}, CHI:{sub:"CHIBears",name:"Chicago Bears"}, CIN:{sub:"bengals",name:"Cincinnati Bengals"}, CLE:{sub:"Browns",name:"Cleveland Browns"}, DAL:{sub:"cowboys",name:"Dallas Cowboys"}, DEN:{sub:"DenverBroncos",name:"Denver Broncos"}, DET:{sub:"detroitlions",name:"Detroit Lions"}, GB:{sub:"GreenBayPackers",name:"Green Bay Packers"}, HOU:{sub:"Texans",name:"Houston Texans"}, IND:{sub:"Colts",name:"Indianapolis Colts"}, JAX:{sub:"Jaguars",name:"Jacksonville Jaguars"}, KC:{sub:"KansasCityChiefs",name:"Kansas City Chiefs"}, LAC:{sub:"Chargers",name:"Los Angeles Chargers"}, LAR:{sub:"LosAngelesRams",name:"Los Angeles Rams"}, LV:{sub:"raiders",name:"Las Vegas Raiders"}, MIA:{sub:"miamidolphins",name:"Miami Dolphins"}, MIN:{sub:"minnesotavikings",name:"Minnesota Vikings"}, NE:{sub:"Patriots",name:"New England Patriots"}, NO:{sub:"Saints",name:"New Orleans Saints"}, NYG:{sub:"NYGiants",name:"New York Giants"}, NYJ:{sub:"nyjets",name:"New York Jets"}, PHI:{sub:"eagles",name:"Philadelphia Eagles"}, PIT:{sub:"steelers",name:"Pittsburgh Steelers"}, SEA:{sub:"Seahawks",name:"Seattle Seahawks"}, SF:{sub:"49ers",name:"San Francisco 49ers"}, TB:{sub:"buccaneers",name:"Tampa Bay Buccaneers"}, TEN:{sub:"Tennesseetitans",name:"Tennessee Titans"}, WAS:{sub:"Commanders",name:"Washington Commanders"}
+};
+const FANTASY_SUBS = [{sub:"fantasyfootball",name:"r/fantasyfootball"},{sub:"Fantasy_Football",name:"r/Fantasy_Football"}];
+const REDDIT_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+const COMMON_LAST_NAMES = new Set(["allen","brown","cook","davis","hall","hill","jones","moore","miller","mitchell","murray","reed","rice","robinson","smith","taylor","thomas","walker","williams","wilson","white","young"]);
+const SENTIMENT_WEIGHTS = {
+  strongPositive:["elite","beast","monster","stud","steal","must draft","league winner","league-winning","breakout","sleeper","underrated","pro bowl","all pro","generational","locked in","wr1","rb1","qb1","te1","alpha","dominant","ascending","upside","smash","fire","cheat code"],
+  positive:["good","great","solid","improving","better","growth","excited","healthy","confident","impressed","athletic","fast","strong","efficient","productive","consistent","starter","snap count","target share","volume","opportunity","hype","like","love","role","chemistry"],
+  negative:["bad","concern","worried","disappointing","slow","injury","risky","overrated","overpay","committee","timeshare","limited","decline","regression","aging","old","washed","backup","benched","droppable","td dependent","boom or bust","inconsistent","frustrating"],
+  strongNegative:["bust","avoid","trash","terrible","awful","disaster","fraud","done","finished","washed up","waste","nightmare","toxic","stay away","do not draft","red flag","trainwreck","dumpster fire","ir","torn acl","out for season","major injury"]
+};
+const FALLBACK_PLAYERS = {
+  "4984":{player_id:"4984",full_name:"Josh Allen",first_name:"Josh",last_name:"Allen",position:"QB",team:"BUF",active:true,fantasy_positions:["QB"],age:29,years_exp:7,search_rank:9,depth_chart_position:1,espn_id:"3918298",college:"Wyoming"},
+  "6794":{player_id:"6794",full_name:"Justin Jefferson",first_name:"Justin",last_name:"Jefferson",position:"WR",team:"MIN",active:true,fantasy_positions:["WR"],age:26,years_exp:5,search_rank:2,depth_chart_position:1,espn_id:"4262921",college:"LSU"},
+  "7564":{player_id:"7564",full_name:"Ja'Marr Chase",first_name:"Ja'Marr",last_name:"Chase",position:"WR",team:"CIN",active:true,fantasy_positions:["WR"],age:25,years_exp:4,search_rank:1,depth_chart_position:1,espn_id:"4362628",college:"LSU"},
+  "8155":{player_id:"8155",full_name:"Bijan Robinson",first_name:"Bijan",last_name:"Robinson",position:"RB",team:"ATL",active:true,fantasy_positions:["RB"],age:24,years_exp:2,search_rank:3,depth_chart_position:1,espn_id:"4430807",college:"Texas"},
+  "8150":{player_id:"8150",full_name:"Breece Hall",first_name:"Breece",last_name:"Hall",position:"RB",team:"NYJ",active:true,fantasy_positions:["RB"],age:25,years_exp:3,search_rank:8,depth_chart_position:1,espn_id:"4427366",college:"Iowa State"},
+  "6801":{player_id:"6801",full_name:"CeeDee Lamb",first_name:"CeeDee",last_name:"Lamb",position:"WR",team:"DAL",active:true,fantasy_positions:["WR"],age:27,years_exp:5,search_rank:4,depth_chart_position:1,espn_id:"4241389",college:"Oklahoma"},
+  "1466":{player_id:"1466",full_name:"Travis Kelce",first_name:"Travis",last_name:"Kelce",position:"TE",team:"KC",active:true,fantasy_positions:["TE"],age:36,years_exp:12,search_rank:28,depth_chart_position:1,espn_id:"15847",college:"Cincinnati"},
+  "5859":{player_id:"5859",full_name:"Lamar Jackson",first_name:"Lamar",last_name:"Jackson",position:"QB",team:"BAL",active:true,fantasy_positions:["QB"],age:29,years_exp:7,search_rank:16,depth_chart_position:1,espn_id:"3916387",college:"Louisville"},
+  "SEA":{player_id:"SEA",full_name:"Seattle Seahawks",first_name:"Seattle",last_name:"Seahawks",position:"DEF",team:"SEA",active:true,fantasy_positions:["DEF"],age:null,years_exp:null,search_rank:180,depth_chart_position:1,espn_id:null,college:""}
+};
+const TEAM_ID = {ARI:"22",ATL:"1",BAL:"33",BUF:"2",CAR:"29",CHI:"3",CIN:"4",CLE:"5",DAL:"6",DEN:"7",DET:"8",GB:"9",HOU:"34",IND:"11",JAX:"30",KC:"12",LAC:"24",LAR:"14",LV:"13",MIA:"15",MIN:"16",NE:"17",NO:"18",NYG:"19",NYJ:"20",PHI:"21",PIT:"23",SEA:"26",SF:"25",TB:"27",TEN:"10",WAS:"28"};
+function defaultUser(){return {
+  notes:{},tags:{},rankings:[],tierNames:{1:"No-Brainers",2:"Love These Guys",3:"Solid Starters",4:"Upside Plays",5:"Depth / Watchlist",6:"Late Fliers"},ecr:{},stats:{},
+  settings:{leagueName:"12-Team PPR",teams:12,draftSlot:1,scoring:"PPR",roster:{QB:1,RB:2,WR:2,TE:1,FLEX:1,K:1,DEF:1,BN:6}},
+  draft:{enabled:false,currentPick:1,seconds:90,timerRunning:false,myRoster:[]}
+}};
+function loadJson(key,fallback){try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):fallback}catch{return fallback}}
+function saveJson(key,value){try{localStorage.setItem(key,JSON.stringify(value))}catch(e){console.warn("Storage failed",e)}}
+function getFreshCache(key,maxAge){try{const raw=localStorage.getItem(key); if(!raw)return null; const parsed=JSON.parse(raw); if(Date.now()-(parsed.timestamp||0)>maxAge)return null; return parsed}catch{return null}}
+function safeNumber(v,fallback=0){const n=Number(v); return Number.isFinite(n)?n:fallback}
+function clamp(n,min,max){return Math.max(min,Math.min(max,n))}
+function normalizeName(s=""){return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9 ]/g,"").replace(/\b(jr|sr|ii|iii|iv|v)\b/g,"").replace(/\s+/g," ").trim()}
+function initials(name="?"){return name.split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join("").toUpperCase() || "?"}
+function positionColor(pos){return getComputedStyle(document.documentElement).getPropertyValue(`--pos-${String(pos||"").toLowerCase()}`).trim() || "#60a5fa"}
+function teamLogo(team){return TEAM_ID[team] ? `https://a.espncdn.com/i/teamlogos/nfl/500/${team}.png` : ""}
+function sleeperImg(id,full=false){return `https://sleepercdn.com/content/nfl/players/${full?"":"thumb/"}${id}.jpg`}
+function espnImg(id){return id ? `https://a.espncdn.com/i/headshots/nfl/players/full/${id}.png` : ""}
+function ecrFor(user,p){return safeNumber(user.ecr?.[p.player_id], p.adp || p.search_rank || 999)}
+function tagsFor(user,id){return user.tags?.[id] || {}}
+function hasTag(user,id,tag){return !!tagsFor(user,id)[tag]}
+function toggleTag(setUser,id,tag){setUser(u=>{const current=u.tags?.[id]||{}; return {...u,tags:{...u.tags,[id]:{...current,[tag]:!current[tag]}}}})}
+function setNote(setUser,id,note){setUser(u=>({...u,notes:{...u.notes,[id]:note}}))}
+function calcScore(p,user={ecr:{}}){
+  const rank = safeNumber(p.search_rank, 999);
+  let score = 94 - Math.sqrt(Math.max(1,rank))*3.25;
+  const depth = safeNumber(p.depth_chart_position, 4);
+  if(depth===1)score += 8; else if(depth===2)score += 2; else score -= 8;
+  const age = safeNumber(p.age, 0);
+  if(p.position==="RB" && age>28)score -= (age-28)*4;
+  if(["WR","TE"].includes(p.position) && age>=24 && age<=29)score += 4;
+  if(p.position==="QB" && age>=25 && age<=33)score += 3;
+  if(p.position==="DEF")score = Math.max(score, 54 - Math.sqrt(Math.max(1,rank))*1.1);
+  if(p.injury_status)score -= 12;
+  const ecr = ecrFor(user,p);
+  if(ecr && ecr<999)score = score*.82 + (100 - Math.sqrt(ecr)*3.2)*.18;
+  return Math.round(clamp(score, 28, 99));
+}
+function processPlayers(raw,user=defaultUser()){
+  const rows = Object.values(raw||{}).filter(p=>{
+    const positions = p.fantasy_positions || (p.position ? [p.position] : []);
+    const pos = p.position === "DST" ? "DEF" : p.position;
+    return p && p.active !== false && (p.team || pos==="DEF") && positions.some(x=>["QB","RB","WR","TE","K","DEF","DST"].includes(x));
+  }).map(p=>{
+    const pos = p.position === "DST" ? "DEF" : p.position;
+    const name = p.full_name || `${p.first_name||""} ${p.last_name||""}`.trim() || p.player_id;
+    return {
+      player_id:String(p.player_id || p.sleeper_id || name),
+      full_name:name,
+      first_name:p.first_name || name.split(" ")[0],
+      last_name:p.last_name || name.split(" ").slice(1).join(" "),
+      position:pos,
+      fantasy_positions:p.fantasy_positions || [pos],
+      team:p.team || pos,
+      age:p.age || null,
+      years_exp:p.years_exp ?? null,
+      college:p.college || "",
+      search_rank:safeNumber(p.search_rank,999),
+      depth_chart_position:safeNumber(p.depth_chart_position, pos==="DEF"?1:3),
+      injury_status:p.injury_status || null,
+      espn_id:p.espn_id || p.metadata?.espn_id || null,
+      adp:safeNumber(p.search_rank,999),
+      raw:p
+    };
+  });
+  const fantasyRows = rows.filter(p=>p.search_rank <= 550 || ["QB","RB","WR","TE"].includes(p.position));
+  fantasyRows.sort((a,b)=>a.search_rank-b.search_rank || a.full_name.localeCompare(b.full_name));
+  return fantasyRows.slice(0,900).map((p,i)=>({...p,composite_score:calcScore(p,user),tier:i<12?1:i<36?2:i<72?3:i<120?4:i<200?5:6}));
+}
+function normalizeTrendPayload(list){const out={}; (Array.isArray(list)?list:[]).forEach(item=>{const id=String(item.player_id || item.id || ""); if(id)out[id]=safeNumber(item.count,0)}); return out}
+function buzzFor(p,trends){const add=trends?.addMap?.[p.player_id]||0; const drop=trends?.dropMap?.[p.player_id]||0; if(add>=1000)return {label:"🔥 On fire",className:"good",text:`${add.toLocaleString()} adds`}; if(add>=300)return {label:"📈 Rising",className:"good",text:`${add.toLocaleString()} adds`}; if(drop>=500)return {label:"📉 Falling",className:"bad",text:`${drop.toLocaleString()} drops`}; return {label:"Steady",className:"",text:"No major movement"}}
+
+function sleep(ms){return new Promise(resolve=>setTimeout(resolve,ms))}
+class RedditRequestQueue{constructor(){this.queue=[];this.processing=false;this.MIN_DELAY_MS=7000;this.lastRequestTime=0} add(fetchFn){return new Promise((resolve,reject)=>{this.queue.push({fetchFn,resolve,reject});this.processQueue()})} async processQueue(){if(this.processing||!this.queue.length)return;this.processing=true;while(this.queue.length){const wait=this.MIN_DELAY_MS-(Date.now()-this.lastRequestTime); if(wait>0)await sleep(wait); const job=this.queue.shift(); try{this.lastRequestTime=Date.now(); job.resolve(await job.fetchFn())}catch(e){job.reject(e)}}this.processing=false}}
+const redditQueue = new RedditRequestQueue();
+function redditQueryForPlayer(p,wide=false){const full=(p.full_name||"").trim(); const last=normalizeName(p.last_name || full.split(/\s+/).slice(-1)[0] || full); if(wide || COMMON_LAST_NAMES.has(last))return full; return p.last_name || full}
+async function rawRedditSearch(subreddit,query,limit=12,sort="new"){
+  const proxyUrl=new URL("/.netlify/functions/reddit-search", window.location.origin);
+  proxyUrl.searchParams.set("subreddit",subreddit);
+  proxyUrl.searchParams.set("q",query);
+  proxyUrl.searchParams.set("limit",String(limit));
+  proxyUrl.searchParams.set("sort",sort);
+
+  async function readJsonResponse(response, sourceLabel){
+    const contentType=(response.headers.get("content-type")||"").toLowerCase();
+    const text=await response.text();
+    const looksLikeHtml=text.trim().startsWith("<") || contentType.includes("text/html");
+    if(looksLikeHtml){
+      throw new Error(`${sourceLabel} returned HTML instead of JSON. This means the function/app shell returned HTML or Reddit blocked the upstream request.`);
+    }
+    let parsed=null;
+    try{parsed=JSON.parse(text)}catch(e){
+      throw new Error(`${sourceLabel} returned non-JSON text. Check the function URL directly from your browser.`);
+    }
+    if(!response.ok){
+      throw new Error(parsed?.error || `${sourceLabel} returned ${response.status}`);
+    }
+    return parsed;
+  }
+
+  // First choice on hosted Netlify: same-site Netlify Function. This avoids browser CORS/HTML block pages.
+  const isHostedHttp = window.location.protocol === "https:" || window.location.protocol === "http:";
+  try{
+    const proxied=await fetch(proxyUrl.toString(),{headers:{"Accept":"application/json"},cache:"no-store"});
+    return await readJsonResponse(proxied,"Netlify Scout proxy");
+  }catch(e){
+    console.warn("Scout proxy unavailable:", e.message||e);
+    if(isHostedHttp){
+      throw new Error(`Scout proxy reached Netlify, but Reddit blocked or rejected the upstream scan: ${e.message || e}. Netlify Functions are deployed if /health works. To make live scans more reliable, configure Reddit OAuth environment variables in Netlify, or use Manual Paste.`);
+    }
+  }
+
+  // Local-file fallback only. Hosted browsers usually block Reddit directly, so production should use the proxy.
+  const bases=["https://www.reddit.com", "https://old.reddit.com"]; let lastErr=null;
+  for(const base of bases){
+    try{
+      const url=new URL(`${base}/r/${subreddit}/search.json`);
+      url.searchParams.set("q",query);
+      url.searchParams.set("restrict_sr","1");
+      url.searchParams.set("sort",sort);
+      url.searchParams.set("t","month");
+      url.searchParams.set("limit",String(limit));
+      url.searchParams.set("type","link");
+      url.searchParams.set("raw_json","1");
+      const res=await fetch(url.toString(),{headers:{"Accept":"application/json"},cache:"no-store"});
+      if(res.status===429){await sleep(10000); throw new Error("Reddit rate limit hit. Try again in a minute.")}
+      const data=await readJsonResponse(res,`Direct Reddit r/${subreddit}`);
+      return normalizeRedditChildren(data,subreddit);
+    }catch(e){lastErr=e}
+  }
+  throw lastErr || new Error("Reddit unavailable. Use Manual Paste for now.")
+}
+function normalizeRedditChildren(data,subreddit){
+  return (data?.data?.children||[]).map(child=>{const d=child.data||{}; return {title:d.title||"Untitled Reddit post",selftext:(d.selftext||"").slice(0,500),score:safeNumber(d.score,0),numComments:safeNumber(d.num_comments,0),author:d.author||"reddit",created:safeNumber(d.created_utc,Date.now()/1000),url:`https://reddit.com${d.permalink||""}`,subreddit:d.subreddit||subreddit,upvoteRatio:safeNumber(d.upvote_ratio,0),flair:d.link_flair_text||null}})
+}
+function redditSearch(subreddit,query,limit=12,sort="new"){return redditQueue.add(()=>rawRedditSearch(subreddit,query,limit,sort))}
+function getSentimentLabel(score){if(score>=50)return {text:"EXTREMELY BULLISH",icon:"🔥🔥",className:"good"}; if(score>=25)return {text:"BULLISH",icon:"🔥",className:"good"}; if(score>=10)return {text:"LEANING POSITIVE",icon:"📈",className:"good"}; if(score>=-10)return {text:"MIXED / NEUTRAL",icon:"➡️",className:"blue"}; if(score>=-25)return {text:"LEANING NEGATIVE",icon:"📉",className:"bad"}; if(score>=-50)return {text:"BEARISH",icon:"⚠️",className:"bad"}; return {text:"EXTREMELY BEARISH",icon:"🚩🚩",className:"bad"}}
+function analyzeSentiment(posts=[]){let totalScore=0,totalWeight=0; const highlights={positive:[],negative:[]}; for(const post of posts){const text=(post.title+" "+(post.selftext||"")).toLowerCase(); let score=0; for(const w of SENTIMENT_WEIGHTS.strongPositive){if(text.includes(w))score+=3} for(const w of SENTIMENT_WEIGHTS.positive){if(text.includes(w))score+=1} for(const w of SENTIMENT_WEIGHTS.negative){if(text.includes(w))score-=1} for(const w of SENTIMENT_WEIGHTS.strongNegative){if(text.includes(w))score-=3} const engagement=Math.log2(Math.max(post.score,1)+safeNumber(post.numComments,0)+1); totalScore+=score*engagement; totalWeight+=engagement; const item={title:post.title,score:post.score,comments:post.numComments,url:post.url,date:new Date(post.created*1000),subreddit:post.subreddit}; if(score>=3 && post.score>=3)highlights.positive.push(item); if(score<=-3 && post.score>=3)highlights.negative.push(item)} const normalized=totalWeight?Math.round((totalScore/totalWeight)*10):0; const finalScore=clamp(normalized,-100,100); return {score:finalScore,label:getSentimentLabel(finalScore),postsAnalyzed:posts.length,highlights:{positive:highlights.positive.sort((a,b)=>b.score-a.score).slice(0,5),negative:highlights.negative.sort((a,b)=>b.score-a.score).slice(0,5)}}}
+function detectByKeywords(posts,keywords,minPosts,type,blurb,extra={}){const hits=posts.filter(post=>{const text=(post.title+" "+(post.selftext||"")).toLowerCase(); return keywords.some(k=>text.includes(k)) && post.score>=3}).sort((a,b)=>b.score-a.score); if(hits.length<minPosts)return null; return {type,postCount:hits.length,severity:hits.length>=5?"HIGH":hits.length>=3?"MEDIUM":"LOW",evidence:hits.slice(0,3).map(p=>({title:p.title,score:p.score,url:p.url,subreddit:p.subreddit})),blurb, ...extra}}
+function extractIntelAlerts(posts=[],player={}){const adp=safeNumber(player.adp||player.search_rank,999); const alerts=[]; const sleeper=detectByKeywords(posts,["sleeper","breakout","underrated","under the radar","nobody is talking about","steal","value","late round","hidden gem","keep an eye on","watch out for"],adp<50?99:2,"SLEEPER_ALERT",`Fan base sleeper buzz found for a player outside the early-round range.`); if(sleeper)alerts.push({...sleeper,className:"good"}); const injury=detectByKeywords(posts,["injury","hurt","limping","sideline","limited practice","dnp","held out","mri","x-ray","surgery","rehab","not practicing","questionable","doubtful","out"],1,"INJURY_WATCH",`Injury/status chatter found in the fan community.`); if(injury)alerts.push({...injury,className:"bad"}); const battle=detectByKeywords(posts,["depth chart","starter","starting","competition","camp battle","who starts","rb1","wr1","qb1","committee","timeshare","snap share","rotation","taking over"],2,"DEPTH_CHART_BATTLE",`Active role or depth-chart discussion could affect opportunity.`); if(battle)alerts.push({...battle,className:""}); const scheme=detectByKeywords(posts,["new offense","new scheme","coaching change","offensive coordinator","play calling","more targets","new role","slot","outside","every down","passing down","red zone","goal line","two minute","hurry up","motion","personnel"],2,"SCHEME_CHANGE",`Usage or scheme-change buzz could shift fantasy production.`); if(scheme)alerts.push({...scheme,className:""}); return alerts.slice(0,5)}
+function makeRedditIntel(player,posts,sources=[],errors=[],manual=false){const unique=[]; const seen=new Set(); for(const p of posts){const key=normalizeName(p.title).slice(0,100)+"|"+(p.subreddit||""); if(!seen.has(key)){seen.add(key); unique.push(p)}} const sentiment=analyzeSentiment(unique); return {playerId:player.player_id,playerName:player.full_name,team:player.team,manual,scannedAt:Date.now(),sources,errors:errors.map(e=>String(e.message||e)).slice(0,4),posts:unique.slice(0,40),sentiment,alerts:extractIntelAlerts(unique,player)}}
+async function buildRedditIntel(player){const teamInfo=SUBREDDIT_MAP[player.team]; const posts=[]; const sources=[]; const errors=[]; if(teamInfo){try{const q=redditQueryForPlayer(player,false); const teamPosts=await redditSearch(teamInfo.sub,q,15,"new"); posts.push(...teamPosts); sources.push(`r/${teamInfo.sub}`)}catch(e){errors.push(e)}} try{const q=redditQueryForPlayer(player,true); const ffPosts=await redditSearch("fantasyfootball",q,15,"new"); posts.push(...ffPosts); sources.push("r/fantasyfootball")}catch(e){errors.push(e)} if(errors.length && !posts.length)throw errors[0]; return makeRedditIntel(player,posts,sources,errors,false)}
+function parseManualIntel(text){return String(text||"").split(/\n+/).map(x=>x.trim()).filter(Boolean).slice(0,40).map((line,i)=>({title:line,selftext:"",score:5,numComments:0,author:"manual",created:Date.now()/1000-i*60,url:"",subreddit:"manual",upvoteRatio:1,flair:null}))}
+function redditFor(player,cache){const entry=cache?.[player?.player_id]; return entry?.data || null}
+function redditFresh(entry){return !!entry?.timestamp && Date.now()-entry.timestamp<REDDIT_CACHE_TTL_MS}
+function redditAge(ts){if(!ts)return "Never"; const mins=Math.round((Date.now()-ts)/60000); if(mins<1)return "just now"; if(mins<60)return `${mins}m ago`; const hrs=Math.round(mins/60); if(hrs<48)return `${hrs}h ago`; return `${Math.round(hrs/24)}d ago`}
+function pruneRedditCache(cache){let entries=Object.entries(cache||{}); const str=JSON.stringify(cache||{}); if(str.length<=2*1024*1024)return cache; entries.sort((a,b)=>(b[1].timestamp||0)-(a[1].timestamp||0)); return Object.fromEntries(entries.slice(0,Math.ceil(entries.length*.75)))}
+function cacheRedditIntel(setRedditCache,playerId,data){setRedditCache(prev=>pruneRedditCache({...prev,[playerId]:{timestamp:Date.now(),data}}))}
+function projectionFor(p,user){
+  const imported = user.stats?.[p.player_id];
+  if(imported)return {...imported,source:"Imported"};
+  const score = p.composite_score || calcScore(p,user);
+  const games = 17;
+  if(p.position==="QB")return {source:"Projection proxy",GP:games,PassYds:Math.round(score*42),PassTD:Math.round(score/3.7),RushYds:Math.round(score*6),RushTD:Math.round(score/20),PPR:(score/5.4).toFixed(1)};
+  if(p.position==="RB")return {source:"Projection proxy",GP:games,RushYds:Math.round(score*11),RushTD:Math.round(score/13),Rec:Math.round(score/2.5),Targets:Math.round(score/1.95),RecYds:Math.round(score*3.9),RecTD:Math.round(score/27),PPR:(score/5.25).toFixed(1)};
+  if(p.position==="WR")return {source:"Projection proxy",GP:games,Rec:Math.round(score/1.25),Targets:Math.round(score/0.82),RecYds:Math.round(score*12.5),RecTD:Math.round(score/15.5),PPR:(score/5.2).toFixed(1)};
+  if(p.position==="TE")return {source:"Projection proxy",GP:games,Rec:Math.round(score/1.65),Targets:Math.round(score/1.15),RecYds:Math.round(score*8),RecTD:Math.round(score/17),PPR:(score/5.9).toFixed(1)};
+  return {source:"Projection proxy",GP:games,PPR:(score/6.8).toFixed(1)};
+}
+function gradesFor(p,user){
+  const s = p.composite_score || calcScore(p,user);
+  const depth = p.depth_chart_position===1 ? 88 : p.depth_chart_position===2 ? 68 : 48;
+  const age = p.age ? (p.position==="RB" ? 100-Math.max(0,p.age-24)*7 : 100-Math.abs(p.age-27)*4) : 62;
+  const rankGrade = clamp(102-Math.sqrt(p.search_rank||200)*6,35,98);
+  const injury = p.injury_status ? 42 : 84;
+  if(p.position==="QB")return {Passing:rankGrade,Rushing:s*.82,Team:rankGrade*.9,Floor:s*.86,Upside:s,Durability:injury,Age:clamp(age,35,96)};
+  if(p.position==="RB")return {Volume:rankGrade,Explosiveness:s*.88,Receiving:s*.8,GoalLine:s*.78,DepthChart:depth,Durability:injury,Age:clamp(age,25,95)};
+  if(p.position==="WR")return {Targets:rankGrade,Hands:s*.86,YardsAfterCatch:s*.8,TDEquity:s*.76,DepthChart:depth,Durability:injury,Age:clamp(age,30,96)};
+  if(p.position==="TE")return {Targets:rankGrade,RedZone:s*.82,RouteRole:depth,Floor:s*.75,Upside:s*.9,Durability:injury,Age:clamp(age,25,94)};
+  return {Opportunity:rankGrade,Floor:s*.78,Upside:s*.82,Stability:injury,Context:depth};
+}
+function strengthsFor(p,user,trends){
+  const b=buzzFor(p,trends); const out=[];
+  if((p.composite_score||0)>=86)out.push(`Elite algorithm grade for ${p.position}, driven by strong rank, role, and profile signals.`);
+  if(p.depth_chart_position===1)out.push("Clear depth-chart path — projected as a primary option instead of a speculative backup.");
+  if(["WR","TE"].includes(p.position) && p.age && p.age>=24 && p.age<=29)out.push("Prime age window for route volume, weekly floor, and explosive fantasy weeks.");
+  if(p.position==="RB" && p.age && p.age<=26)out.push("Young RB profile with room for workload growth and touchdown upside.");
+  if(b.className==="good")out.push(`Community momentum is positive: ${b.text} in the latest Sleeper trend window.`);
+  if(!out.length)out.push("Stable watchlist profile — useful to compare against roster needs, ADP, and imported rankings.");
+  return out;
+}
+function risksFor(p,user,trends){
+  const out=[]; const b=buzzFor(p,trends);
+  if(p.injury_status)out.push(`Currently has an injury designation: ${p.injury_status}. Monitor before draft day.`);
+  if(p.depth_chart_position>1)out.push(`Not locked into the top depth-chart spot, so opportunity could be volatile.`);
+  if(p.position==="RB" && p.age>=29)out.push("Older RB profile — historically, workload and efficiency can fall quickly at this position.");
+  if(["WR","TE"].includes(p.position) && p.age>=31)out.push("Veteran pass catcher profile with possible age-curve and role-compression risk.");
+  if(b.className==="bad")out.push(`Negative market signal: ${b.text} in the current trend window.`);
+  if((p.search_rank||999)>180)out.push("Lower market rank means this is probably a depth, matchup, or watchlist option rather than a core pick.");
+  if(!out.length)out.push("No major algorithmic red flags from the currently available free data.");
+  return out;
+}
+function draftRecommendation(p,user,trends){
+  const score=p.composite_score||calcScore(p,user); const ecr=ecrFor(user,p); const adp=p.adp||p.search_rank||999; const gap=ecr && ecr<999 ? Math.round(adp-ecr) : 0;
+  if(hasTag(user,p.player_id,"avoid"))return "USER AVOID — You tagged this player as Avoid. Only reconsider if the price falls far below expectation.";
+  if(hasTag(user,p.player_id,"target"))return "USER TARGET — This is on your target list. Prioritize within the right tier and roster need.";
+  if(gap>=15)return `STRONG VALUE — Imported ECR is about ${gap} spots better than current ADP/rank. Consider attacking before the room catches up.`;
+  if(gap<=-15)return `PRICEY — Current ADP/rank is about ${Math.abs(gap)} spots higher than imported ECR. Let the room overpay unless roster need is extreme.`;
+  if(score>=86)return "BUY ZONE — High composite profile with enough role and market support to draft confidently at fair cost.";
+  if(score>=70)return "FAIR PRICE — Useful target when the tier fits your roster build. Do not reach too far.";
+  return "WATCHLIST — Better as a late-round, bench, waiver, or matchup target unless your own notes say otherwise.";
+}
+function scheduleWeeks(p){
+  const teams=["BAL","BUF","CIN","DAL","DET","GB","KC","MIA","NYJ","PHI","SF","ATL","CHI","SEA","HOU","LAR","PIT","TB"];
+  const seed = Array.from(String(p.player_id)).reduce((a,c)=>a+c.charCodeAt(0),0);
+  return Array.from({length:17},(_,i)=>{const n=(seed+i*7)%100; return {week:i+1,opp:teams[(seed+i*3)%teams.length],level:n<36?"easy":n<72?"mid":"hard"}});
+}
+function formatClock(seconds){const s=Math.max(0,seconds||0); return `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`}
+function roundInfo(pick,teams){const round=Math.floor((pick-1)/teams)+1; const inRound=((pick-1)%teams)+1; return {round,inRound}}
+function userPicksNext(currentPick,teams,slot){for(let p=currentPick;p<currentPick+teams*3;p++){const {round,inRound}=roundInfo(p,teams); const target=round%2===1?slot:teams-slot+1; if(inRound===target)return p} return null}
+function rosterCounts(players,user){const byId=Object.fromEntries(players.map(p=>[p.player_id,p])); return (user.draft?.myRoster||[]).reduce((acc,id)=>{const p=byId[id]; if(p)acc[p.position]=(acc[p.position]||0)+1; return acc},{})}
+function rosterNeeds(players,user){const counts=rosterCounts(players,user); const r=user.settings?.roster || defaultUser().settings.roster; const needs=[]; ["QB","RB","WR","TE","K","DEF"].forEach(pos=>{const want=r[pos]||0; const have=counts[pos]||0; if(want>have)needs.push(`${pos} ${have}/${want}`)}); return needs}
+function bestAvailableNeeds(players,user,query=""){
+  const needs=rosterNeeds(players,user).map(x=>x.split(" ")[0]);
+  const base=players.filter(p=>!hasTag(user,p.player_id,"drafted") && matchesQuery(p,query));
+  const prefer = base.filter(p=>needs.includes(p.position));
+  return (prefer.length?prefer:base).slice(0,6);
+}
+function matchesQuery(p,q){if(!q)return true; const s=q.toLowerCase().trim(); return [p.full_name,p.position,p.team,p.college].join(" ").toLowerCase().includes(s)}
+function sortPlayers(list,sort,user){const copy=[...list]; copy.sort((a,b)=>{if(sort==="score")return (b.composite_score-a.composite_score)||(a.search_rank-b.search_rank); if(sort==="adp")return (a.adp-b.adp); if(sort==="ecr")return ecrFor(user,a)-ecrFor(user,b); if(sort==="age")return safeNumber(a.age,99)-safeNumber(b.age,99); if(sort==="team")return String(a.team).localeCompare(String(b.team))||a.full_name.localeCompare(b.full_name); return a.full_name.localeCompare(b.full_name)}); return copy}
+function downloadFile(name,content,type="text/plain"){const blob=new Blob([content],{type}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url)}
+function parseRankings(text,players){const map={}; const byName=new Map(players.map(p=>[normalizeName(p.full_name),p])); const byLastInitial=new Map(players.map(p=>[`${normalizeName(p.last_name)} ${String(p.first_name||"")[0]?.toLowerCase()}`,p])); text.split(/\n+/).forEach((line,i)=>{const clean=line.trim(); if(!clean)return; const parts=clean.split(/[,\t]/).map(x=>x.trim()).filter(Boolean); let rank=safeNumber(parts[0],i+1); let name=parts.length>1?parts.slice(1).join(" "):clean.replace(/^\d+[.)\-\s]*/,""); let p=byName.get(normalizeName(name)); if(!p){const bits=normalizeName(name).split(" "); const key=`${bits.at(-1)||""} ${bits[0]?.[0]||""}`; p=byLastInitial.get(key)} if(p)map[p.player_id]=rank}); return map}
+function parseStatsCsv(text,players){const out={}; const byName=new Map(players.map(p=>[normalizeName(p.full_name),p])); const lines=text.split(/\n+/).map(x=>x.trim()).filter(Boolean); if(!lines.length)return out; const headers=lines[0].split(",").map(h=>h.trim()); const start=headers.some(h=>/^player$/i.test(h))?1:0; const keys=start?headers:["Player","GP","PassYds","PassTD","RushYds","RushTD","Rec","Targets","RecYds","RecTD","Fumbles","PPR"]; lines.slice(start).forEach(line=>{const vals=line.split(",").map(v=>v.trim()); const row={}; keys.forEach((k,i)=>{row[k]=vals[i]}); const p=byName.get(normalizeName(row.Player||vals[0])); if(p){const stat={}; Object.entries(row).forEach(([k,v])=>{if(k!=="Player" && v!==undefined && v!=="")stat[k]=Number.isNaN(Number(v))?v:Number(v)}); stat.source="Imported"; out[p.player_id]=stat}}); return out}
+function cheatHtml(players,user){
+  const byId=Object.fromEntries(players.map(p=>[p.player_id,p]));
+  const ranked=(user.rankings?.length?user.rankings.map(id=>byId[id]).filter(Boolean):players).filter(p=>!hasTag(user,p.player_id,"drafted"));
+  const targets=ranked.filter(p=>hasTag(user,p.player_id,"target")||hasTag(user,p.player_id,"sleeper")).slice(0,40);
+  const positions=["QB","RB","WR","TE","K","DEF"];
+  const rows=(list)=>list.slice(0,60).map((p,i)=>`<tr><td>${i+1}</td><td>${p.full_name}</td><td>${p.position}</td><td>${p.team||"-"}</td><td>${p.composite_score}</td><td>${ecrFor(user,p)||"-"}</td></tr>`).join("");
+  return `<!DOCTYPE html><html><head><title>Gridiron Intel Cheat Sheet</title><style>body{font-family:Arial,sans-serif;color:#111;padding:24px}h1{margin:0 0 4px}h2{margin:18px 0 8px}table{width:100%;border-collapse:collapse;margin-bottom:10px}th,td{border:1px solid #ddd;padding:6px;font-size:12px;text-align:left}th{background:#eee}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media print{body{padding:10px}.grid{grid-template-columns:1fr 1fr}}</style></head><body><h1>Gridiron Intel Cheat Sheet</h1><p>${user.settings?.leagueName||"12-Team PPR"} · Generated ${new Date().toLocaleString()}</p><h2>Overall Board</h2><table><thead><tr><th>#</th><th>Player</th><th>Pos</th><th>Team</th><th>Score</th><th>ECR</th></tr></thead><tbody>${rows(ranked)}</tbody></table><h2>Targets / Sleepers</h2><table><thead><tr><th>#</th><th>Player</th><th>Pos</th><th>Team</th><th>Score</th><th>ECR</th></tr></thead><tbody>${rows(targets)}</tbody></table><div class="grid">${positions.map(pos=>`<section><h2>${pos}</h2><table><thead><tr><th>#</th><th>Player</th><th>Team</th><th>Score</th></tr></thead><tbody>${ranked.filter(p=>p.position===pos).slice(0,24).map((p,i)=>`<tr><td>${i+1}</td><td>${p.full_name}</td><td>${p.team||"-"}</td><td>${p.composite_score}</td></tr>`).join("")}</tbody></table></section>`).join("")}</div></body></html>`;
+}
+function deepMerge(base,patch){if(!patch||typeof patch!=="object")return base; const out={...base}; Object.keys(patch).forEach(k=>{out[k]=patch[k]&&typeof patch[k]==="object"&&!Array.isArray(patch[k])?deepMerge(base[k]||{},patch[k]):patch[k]}); return out}
+function PlayerImage({player,className="headshot-wrap"}){const [src,setSrc]=useState(sleeperImg(player.player_id)); const [failed,setFailed]=useState(false); useEffect(()=>{setSrc(sleeperImg(player.player_id));setFailed(false)},[player.player_id]); if(failed)return <div className={className} style={{borderColor:positionColor(player.position)}}><span className="initials">{initials(player.full_name)}</span></div>; return <div className={className} style={{borderColor:positionColor(player.position)}}><img loading="lazy" alt="" src={src} onError={()=>{if(src.includes("thumb/")){setSrc(sleeperImg(player.player_id,true))}else if(player.espn_id && !src.includes("espncdn")){setSrc(espnImg(player.espn_id))}else setFailed(true)}} /></div>}
+function ScoreBar({value}){return <div className="score-line"><div className="scorebar"><span style={{"--w":`${clamp(value,0,100)}%`}} /></div><span className="score-badge">{Math.round(value)}</span></div>}
+function TagButtons({player,user,setUser,compact=false}){return <div className="tag-row">{TAGS.map(t=><button key={t.key} className={`tag-btn ${hasTag(user,player.player_id,t.key)?"active":""}`} onClick={(e)=>{e.stopPropagation();toggleTag(setUser,player.player_id,t.key)}}>{compact?t.label.split(" ")[0]:t.label}</button>)}</div>}
+function PlayerCard({player,user,setUser,trends,onOpen,redditCache}){const buzz=buzzFor(player,trends); const drafted=hasTag(user,player.player_id,"drafted"); const reddit=redditFor(player,redditCache); const rLabel=reddit?.sentiment?.label; return <article className={`player-card ${drafted?"drafted":""}`} style={{borderLeftColor:positionColor(player.position)}} onClick={()=>onOpen(player)}><PlayerImage player={player}/><div className="card-body"><div className="card-title-row"><div><h3>{player.full_name}</h3><div className="meta">{player.position} · {player.team||"FA"}{player.age?` · Age ${player.age}`:""}</div></div>{teamLogo(player.team)&&<img className="team-logo" alt="" src={teamLogo(player.team)} />}</div><ScoreBar value={player.composite_score}/><div className="card-footer"><span className="pill gold">ADP {player.adp||"-"}</span><span className="pill">Tier {player.tier}</span>{buzz.className&&<span className={`pill ${buzz.className}`}>{buzz.label}</span>}{rLabel&&<span className={`pill ${rLabel.className}`}>📡 {rLabel.icon} {reddit.sentiment.score>0?"+":""}{reddit.sentiment.score}</span>}{drafted&&<span className="pill blue">Drafted</span>}</div><TagButtons player={player} user={user} setUser={setUser} compact /></div></article>}
+function DraftDayPanel({players,user,setUser,toast,query}){const teams=user.settings?.teams||12; const slot=user.settings?.draftSlot||1; const draft=user.draft||defaultUser().draft; const info=roundInfo(draft.currentPick,teams); const nextMine=userPicksNext(draft.currentPick,teams,slot); const onClock=()=>setUser(u=>({...u,draft:{...u.draft,timerRunning:!u.draft.timerRunning}})); const best=bestAvailableNeeds(players,user,query); return <section className="draft-card"><div className="draft-top"><div><span className="kicker">Draft Day Mode</span><h3 style={{margin:"4px 0 0",fontSize:"1.25rem"}}>Round {info.round}, Pick {info.inRound} · Overall {draft.currentPick}</h3><p>{nextMine===draft.currentPick?"You are on the clock." : `Your next pick: overall ${nextMine || "—"}`}</p></div><div className="timer">{formatClock(draft.seconds)}</div></div><div className="tag-row"><button className="primary-btn" onClick={()=>setUser(u=>({...u,draft:{...u.draft,currentPick:(u.draft.currentPick||1)+1,seconds:90,timerRunning:false}}))}>Next Pick</button><button className="ghost-btn" onClick={onClock}>{draft.timerRunning?"Pause Timer":"Start Timer"}</button><button className="ghost-btn" onClick={()=>setUser(u=>({...u,draft:{...u.draft,seconds:90,timerRunning:false}}))}>Reset Timer</button><button className="danger-btn" onClick={()=>setUser(u=>({...u,draft:{...u.draft,enabled:false,timerRunning:false}}))}>Exit Draft Mode</button></div><div className="needs-row">{rosterNeeds(players,user).length?rosterNeeds(players,user).map(n=><span key={n} className="pill gold">Need {n}</span>):<span className="pill good">Starting lineup filled</span>}</div><div className="mini-grid" style={{marginTop:10}}>{best.slice(0,4).map(p=><div className="stat-tile" key={p.player_id}><strong>{p.full_name}</strong><span>{p.position} · {p.team} · Score {p.composite_score}</span></div>)}</div></section>}
+function DraftBoard({players,user,setUser,trends,query,openPlayer,toast,redditCache}){const [pos,setPos]=useState("ALL"); const [sort,setSort]=useState("score"); const [view,setView]=useState("cards"); const [tagFilter,setTagFilter]=useState("all"); const [hideDrafted,setHideDrafted]=useState(true); const filtered=useMemo(()=>{let list=players.filter(p=>matchesQuery(p,query)); if(pos!=="ALL")list=list.filter(p=>p.position===pos); if(tagFilter!=="all")list=list.filter(p=>hasTag(user,p.player_id,tagFilter)); if(hideDrafted)list=list.filter(p=>!hasTag(user,p.player_id,"drafted")); return sortPlayers(list,sort,user)},[players,user,query,pos,sort,tagFilter,hideDrafted]); function markMyPick(p){setUser(u=>{const roster=new Set(u.draft?.myRoster||[]); roster.add(p.player_id); const tagState={...(u.tags?.[p.player_id]||{}),drafted:true,target:false}; return {...u,tags:{...u.tags,[p.player_id]:tagState},draft:{...u.draft,myRoster:[...roster],currentPick:(u.draft?.currentPick||1)+1,seconds:90,timerRunning:false}}}); toast(`${p.full_name} added to your roster`) } return <><section className="hero-card"><div className="hero-content"><span className="kicker">Film Room Phase A</span><h2>Draft Board</h2><p>Draft board plus the first Scout Network layer. Sleeper powers the player pool; player cards can now show cached Reddit fan-buzz badges after you scan a Deep Dive.</p><div className="status-row"><div className="stat-tile"><strong>{players.length}</strong><span>Players loaded</span></div><div className="stat-tile"><strong>{filtered.length}</strong><span>Visible after filters</span></div><div className="stat-tile"><strong>{Object.values(user.tags||{}).filter(t=>t.target).length}</strong><span>Targets tagged</span></div><div className="stat-tile"><strong>{user.draft?.myRoster?.length||0}</strong><span>My roster</span></div></div><div className="tag-row"><button className="primary-btn" onClick={()=>setUser(u=>({...u,draft:{...u.draft,enabled:true}}))}>{user.draft?.enabled?"Draft Mode Active":"Start Draft Day Mode"}</button><button className="ghost-btn" onClick={()=>{const html=cheatHtml(players,user); downloadFile("gridiron-intel-cheat-sheet.html",html,"text/html")}}>Download Cheat Sheet</button></div></div></section>{user.draft?.enabled&&<DraftDayPanel players={players} user={user} setUser={setUser} toast={toast} query={query}/>}<div className="toolbar"><div className="filter-scroll">{POSITIONS.map(x=><button key={x} className={`chip ${pos===x?"active":""}`} onClick={()=>setPos(x)}>{x}</button>)}<button className={`chip ${hideDrafted?"active":""}`} onClick={()=>setHideDrafted(v=>!v)}>{hideDrafted?"Hide Drafted":"Show Drafted"}</button></div><div className="filter-scroll"><button className={`chip ${tagFilter==="all"?"active":""}`} onClick={()=>setTagFilter("all")}>All Tags</button>{TAGS.map(t=><button key={t.key} className={`chip ${tagFilter===t.key?"active":""}`} onClick={()=>setTagFilter(t.key)}>{t.label}</button>)}</div><div className="control-grid"><select className="select-input" value={sort} onChange={e=>setSort(e.target.value)}><option value="score">Sort: Composite Score</option><option value="adp">Sort: ADP / Sleeper Rank</option><option value="ecr">Sort: Imported ECR</option><option value="age">Sort: Age</option><option value="team">Sort: Team</option><option value="name">Sort: Name</option></select><div className="view-toggle"><button className={view==="cards"?"active":""} onClick={()=>setView("cards")}>Cards</button><button className={view==="table"?"active":""} onClick={()=>setView("table")}>Table</button></div><button className="ghost-btn" onClick={()=>{setPos("ALL");setTagFilter("all");setHideDrafted(false)}}>Reset Filters</button></div></div>{filtered.length===0?<div className="empty-card"><strong>No players match this view.</strong><p>Clear filters, change search, or show drafted players.</p></div>:view==="cards"?<section className="players-grid">{filtered.slice(0,240).map(p=><PlayerCard key={p.player_id} player={p} user={user} setUser={setUser} trends={trends} redditCache={redditCache} onOpen={openPlayer}/>)}</section>:<div className="table-wrap"><table><thead><tr><th>Player</th><th>Pos</th><th>Team</th><th>Score</th><th>ADP</th><th>ECR</th><th>Buzz</th><th>Actions</th></tr></thead><tbody>{filtered.slice(0,300).map(p=><tr key={p.player_id} onClick={()=>openPlayer(p)}><td><b>{p.full_name}</b></td><td>{p.position}</td><td>{p.team}</td><td>{p.composite_score}</td><td>{p.adp}</td><td>{ecrFor(user,p)}</td><td>{buzzFor(p,trends).label}</td><td><button className="mini-btn" onClick={(e)=>{e.stopPropagation(); user.draft?.enabled?markMyPick(p):toggleTag(setUser,p.player_id,"drafted")}}>{user.draft?.enabled?"My Pick":"Drafted"}</button></td></tr>)}</tbody></table></div>}</>}
+function FanBaseIntel({player,redditCache,setRedditCache,scanReddit,redditScan,toast}){const [manual,setManual]=useState(""); const entry=redditCache?.[player.player_id]; const intel=entry?.data; const scanning=redditScan?.playerId===player.player_id && redditScan.status==="running"; const failed=redditScan?.playerId===player.player_id && redditScan.status==="error"; const score=intel?.sentiment?.score||0; const width=Math.max(4,Math.min(50,Math.abs(score)/2)); const offset=score>=0?"50%":`${50-width}%`; function analyzePaste(){const posts=parseManualIntel(manual); if(!posts.length){toast("Paste at least one post title or comment first");return} const data=makeRedditIntel(player,posts,["manual paste"],[],true); cacheRedditIntel(setRedditCache,player.player_id,data); setManual(""); toast("Manual fan intel analyzed and saved")} return <section className="deep-card fan-intel-card"><div className="section-title"><h3>📡 Fan Base Intel</h3><span className={`pill ${intel?.sentiment?.label?.className||""}`}>{intel?`${intel.sentiment.label.icon} ${intel.sentiment.score>0?"+":""}${intel.sentiment.score}`:"No scan"}</span></div><p>Scout Network scans this player’s team subreddit plus r/fantasyfootball, then turns fan chatter into a separate buzz signal. It does not change the core composite score yet.</p><div className="tag-row" style={{marginTop:10}}><button className="primary-btn" disabled={scanning} onClick={()=>scanReddit(player,true)}>{scanning?"Scanning...":"Scan Player"}</button>{intel&&<button className="ghost-btn" disabled={scanning} onClick={()=>scanReddit(player,true)}>Refresh Scan</button>}<button className="danger-btn" disabled={!intel} onClick={()=>setRedditCache(c=>{const next={...(c||{})}; delete next[player.player_id]; return next})}>Clear Intel</button></div>{scanning&&<div className="notice-card" style={{marginTop:10}}><p><b>{redditScan.message}</b></p><p>Reddit requests are intentionally spaced out to be gentle with the free endpoint.</p></div>}{failed&&<div className="notice-card" style={{marginTop:10}}><p><b>Reddit scan could not finish.</b></p><p>{redditScan.message}. Use manual paste below if your browser or Reddit blocks the public JSON endpoint.</p></div>}{intel&&<><div className="source-row"><span className="pill blue">Updated {redditAge(entry.timestamp)}</span><span className="pill">{intel.sentiment.postsAnalyzed} posts analyzed</span>{intel.sources?.map(src=><span key={src} className="pill">{src}</span>)}{intel.manual&&<span className="pill gold">Manual paste</span>}</div><div className="sentiment-meter"><span style={{"--w":`${width}%`,"--offset":offset}} /></div><p><b>{intel.sentiment.label.icon} {intel.sentiment.label.text}</b> ({intel.sentiment.score>0?"+":""}{intel.sentiment.score})</p>{intel.errors?.length>0&&<p style={{marginTop:8}}>Partial scan note: {intel.errors.join(" · ")}</p>}{intel.alerts?.length>0&&<><div className="section-title" style={{marginTop:14}}><h3>Intel Alerts</h3></div>{intel.alerts.map((a,i)=><div className={`intel-alert ${a.className||""}`} key={i}><b>{a.type.replaceAll("_"," ")} · {a.severity||"WATCH"}</b><br/>{a.blurb}{a.evidence?.[0]&&<small style={{display:"block",color:"var(--text-secondary)",marginTop:5}}>Top evidence: {a.evidence[0].title}</small>}</div>)}</>}{intel.sentiment.highlights?.positive?.length>0&&<><div className="section-title" style={{marginTop:14}}><h3>What Fans Like</h3></div>{intel.sentiment.highlights.positive.slice(0,3).map((p,i)=><a className="intel-post" href={p.url||undefined} target="_blank" rel="noreferrer" key={i}><b>{p.title}</b><small>r/{p.subreddit} · ↑ {p.score} · {p.comments} comments</small></a>)}</>}{intel.sentiment.highlights?.negative?.length>0&&<><div className="section-title" style={{marginTop:14}}><h3>What Fans Worry About</h3></div>{intel.sentiment.highlights.negative.slice(0,3).map((p,i)=><a className="intel-post" href={p.url||undefined} target="_blank" rel="noreferrer" key={i}><b>{p.title}</b><small>r/{p.subreddit} · ↑ {p.score} · {p.comments} comments</small></a>)}</>}{intel.posts?.length>0&&<><div className="section-title" style={{marginTop:14}}><h3>Recent Posts Sample</h3></div>{intel.posts.slice(0,5).map((p,i)=><a className="intel-post" href={p.url||undefined} target="_blank" rel="noreferrer" key={i}><b>{p.title}</b><small>r/{p.subreddit} · ↑ {p.score} · {p.numComments} comments</small></a>)}</>}</>}<div className="section-title" style={{marginTop:16}}><h3>Manual Paste Fallback</h3></div><p>If Reddit blocks browser scans, paste post titles, comments, or notes here and the same sentiment/alert engine will analyze them.</p><textarea className="textarea" value={manual} onChange={e=>setManual(e.target.value)} placeholder="Paste one Reddit post title/comment per line..." style={{marginTop:8}}/><button className="ghost-btn" style={{marginTop:8}} onClick={analyzePaste}>Analyze Pasted Intel</button></section>}
+function DeepDive({player,user,setUser,trends,goBack,redditCache,setRedditCache,scanReddit,redditScan,toast}){if(!player)return <div className="empty-card"><strong>No player selected yet.</strong><p>Open a player from Draft, Waivers, Trades, or My Rankings to see the full scouting report.</p><button className="primary-btn" style={{marginTop:12}} onClick={goBack}>Go to Draft Board</button></div>; const grades=gradesFor(player,user); const stats=projectionFor(player,user); const buzz=buzzFor(player,trends); function markMyPick(){setUser(u=>{const roster=new Set(u.draft?.myRoster||[]); roster.add(player.player_id); return {...u,tags:{...u.tags,[player.player_id]:{...(u.tags?.[player.player_id]||{}),drafted:true}},draft:{...u.draft,myRoster:[...roster]}}})} return <><button className="ghost-btn" style={{marginBottom:12}} onClick={goBack}>← Back to Draft Board</button><section className="deep-card"><div className="deep-header"><PlayerImage player={player} className="deep-photo"/><div><span className="kicker">Player Deep Dive</span><h2>{player.full_name}</h2><div className="meta">{player.position} — {player.team || "FA"}{player.age?` · Age ${player.age}`:""}{player.college?` · ${player.college}`:""}</div><ScoreBar value={player.composite_score}/><div className="tag-row" style={{marginTop:10}}><span className={`pill ${buzz.className}`}>{buzz.label} · {buzz.text}</span>{redditFor(player,redditCache)?.sentiment?.label&&<span className={`pill ${redditFor(player,redditCache).sentiment.label.className}`}>📡 {redditFor(player,redditCache).sentiment.label.icon} {redditFor(player,redditCache).sentiment.score>0?"+":""}{redditFor(player,redditCache).sentiment.score}</span>}{player.injury_status&&<span className="pill bad">Injury: {player.injury_status}</span>}</div></div></div><TagButtons player={player} user={user} setUser={setUser}/><div className="tag-row" style={{marginTop:12}}><button className="primary-btn" onClick={markMyPick}>Add to My Roster</button><button className="ghost-btn" onClick={()=>toggleTag(setUser,player.player_id,"drafted")}>{hasTag(user,player.player_id,"drafted")?"Unmark Drafted":"Mark Drafted"}</button></div></section><div className="deep-layout"><section className="deep-card"><div className="section-title"><h3>Scouting Grades</h3><span className="pill gold">Score {player.composite_score}</span></div>{Object.entries(grades).map(([k,v])=><div className="grade-row" key={k}><label>{k}</label><div className="scorebar"><span style={{"--w":`${Math.round(v)}%`}} /></div><b>{Math.round(v)}</b></div>)}<div className="section-title" style={{marginTop:16}}><h3>Draft Recommendation</h3></div><div className="recommend-box"><b>{draftRecommendation(player,user,trends)}</b></div><div className="split-grid" style={{marginTop:14}}><div><div className="section-title"><h3>Strengths</h3></div><ul className="bullet-list">{strengthsFor(player,user,trends).map((s,i)=><li key={i}>{s}</li>)}</ul></div><div><div className="section-title"><h3>Risks</h3></div><ul className="bullet-list">{risksFor(player,user,trends).map((s,i)=><li key={i}>{s}</li>)}</ul></div></div></section><section className="deep-card"><div className="section-title"><h3>Stats / Projection</h3><span className="pill">{stats.source}</span></div><div className="mini-grid">{Object.entries(stats).filter(([k])=>k!=="source").slice(0,10).map(([k,v])=><div className="stat-tile" key={k}><strong>{v}</strong><span>{k}</span></div>)}</div><div className="section-title" style={{marginTop:14}}><h3>Schedule Strength Scaffold</h3><span className="pill">Model proxy</span></div><p>This heatmap is a working scaffold until official schedule/difficulty data is imported.</p><div className="heatmap">{scheduleWeeks(player).map(w=><div key={w.week} className={`week-box ${w.level}`}>W{w.week}<br/>{w.opp}</div>)}</div><div className="section-title" style={{marginTop:14}}><h3>My Notes</h3></div><textarea className="textarea" value={user.notes?.[player.player_id]||""} onChange={e=>setNote(setUser,player.player_id,e.target.value)} placeholder="Add podcast notes, draft thoughts, injury concerns, or your personal read..." /></section></div><FanBaseIntel player={player} redditCache={redditCache} setRedditCache={setRedditCache} scanReddit={scanReddit} redditScan={redditScan} toast={toast}/></>}
+function Waivers({players,trends,user,setUser,openPlayer,redditCache}){const [mode,setMode]=useState("adds"); const addIds=Object.entries(trends.addMap||{}).sort((a,b)=>b[1]-a[1]).map(([id])=>id); const dropIds=Object.entries(trends.dropMap||{}).sort((a,b)=>b[1]-a[1]).map(([id])=>id); const byId=Object.fromEntries(players.map(p=>[p.player_id,p])); const adds=addIds.map(id=>byId[id]).filter(Boolean); const drops=dropIds.map(id=>byId[id]).filter(Boolean); const gems=players.filter(p=>p.composite_score>=72 && p.search_rank>120 && !hasTag(user,p.player_id,"drafted")).slice(0,40); const list=mode==="adds"?adds:mode==="drops"?drops:gems; return <><section className="hero-card"><div className="hero-content"><span className="kicker">Waiver Wire Scanner</span><h2>Market Movement</h2><p>Sleeper trends highlight community buzz. Hidden gems use local composite score versus market rank.</p><div className="filter-scroll"><button className={`chip ${mode==="adds"?"active":""}`} onClick={()=>setMode("adds")}>🔥 Adds</button><button className={`chip ${mode==="drops"?"active":""}`} onClick={()=>setMode("drops")}>📉 Drops</button><button className={`chip ${mode==="gems"?"active":""}`} onClick={()=>setMode("gems")}>💎 Hidden Gems</button></div></div></section>{list.length===0?<div className="empty-card"><strong>No trend data loaded yet.</strong><p>Refresh trends in Settings, or rely on hidden gems until Sleeper trend data is available.</p></div>:<section className="players-grid">{list.slice(0,80).map(p=><PlayerCard key={p.player_id} player={p} user={user} setUser={setUser} trends={trends} redditCache={redditCache} onOpen={openPlayer}/>)}</section>}</>}
+function Trades({players,user,trends,openPlayer}){const [search,setSearch]=useState(""); const [give,setGive]=useState([]); const [get,setGet]=useState([]); const pool=sortPlayers(players.filter(p=>matchesQuery(p,search)&&!hasTag(user,p.player_id,"drafted")),"score",user).slice(0,20); const byId=Object.fromEntries(players.map(p=>[p.player_id,p])); const givePlayers=give.map(id=>byId[id]).filter(Boolean); const getPlayers=get.map(id=>byId[id]).filter(Boolean); const sum=list=>list.reduce((a,p)=>a+(p.composite_score||0),0); const diff=sum(getPlayers)-sum(givePlayers); const verdict=diff>8?"Accept lean — the get side grades meaningfully higher.":diff<-8?"Reject lean — you are giving up more composite value.":"Close deal — use roster need, age, and player tags as the tiebreaker."; function add(side,id){side==="give"?setGive(x=>x.includes(id)?x:[...x,id]):setGet(x=>x.includes(id)?x:[...x,id])} function remove(side,id){side==="give"?setGive(x=>x.filter(v=>v!==id)):setGet(x=>x.filter(v=>v!==id))} return <><section className="hero-card"><div className="hero-content"><span className="kicker">Trade Analyzer</span><h2>Compare Deals</h2><p>Add players to each side. The verdict uses composite score, then you can inspect profile context in Deep Dive.</p><input className="search-input" style={{paddingLeft:12}} value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search a player to add..." /></div></section><div className="trade-sides"><section className="trade-card"><div className="section-title"><h3>I Give</h3><span className="pill bad">{sum(givePlayers)} pts</span></div>{givePlayers.length===0&&<p>Add outgoing players from the search list.</p>}{givePlayers.map(p=><div className="trade-chip" key={p.player_id}><span><b>{p.full_name}</b><br/><small>{p.position} · {p.team} · {p.composite_score}</small></span><button className="mini-btn" onClick={()=>remove("give",p.player_id)}>Remove</button></div>)}</section><section className="trade-card"><div className="section-title"><h3>I Get</h3><span className="pill good">{sum(getPlayers)} pts</span></div>{getPlayers.length===0&&<p>Add incoming players from the search list.</p>}{getPlayers.map(p=><div className="trade-chip" key={p.player_id}><span><b>{p.full_name}</b><br/><small>{p.position} · {p.team} · {p.composite_score}</small></span><button className="mini-btn" onClick={()=>remove("get",p.player_id)}>Remove</button></div>)}</section></div><section className="trade-card"><div className="section-title"><h3>Verdict</h3><span className={`pill ${diff>=0?"good":"bad"}`}>{diff>0?"+":""}{diff}</span></div><p><b>{verdict}</b></p></section><section className="trade-card"><div className="section-title"><h3>Add Players</h3><span className="pill">Top 20</span></div><div className="trade-pool">{pool.map(p=><div className="trade-chip" key={p.player_id}><span onClick={()=>openPlayer(p)}><b>{p.full_name}</b><br/><small>{p.position} · {p.team} · Score {p.composite_score} · {buzzFor(p,trends).label}</small></span><span className="tag-row"><button className="mini-btn" onClick={()=>add("give",p.player_id)}>Give</button><button className="mini-btn" onClick={()=>add("get",p.player_id)}>Get</button></span></div>)}</div></section></>}
+function MyRankings({players,user,setUser,toast,openPlayer}){const [pos,setPos]=useState("ALL"); const byId=Object.fromEntries(players.map(p=>[p.player_id,p])); const rankingIds=user.rankings?.length?user.rankings:players.slice(0,200).map(p=>p.player_id); const ranked=rankingIds.map(id=>byId[id]).filter(Boolean).filter(p=>pos==="ALL"||p.position===pos); const roster=(user.draft?.myRoster||[]).map(id=>byId[id]).filter(Boolean); function initRankings(){setUser(u=>({...u,rankings:players.slice(0,220).map(p=>p.player_id)})); toast("Rankings initialized from composite score") } function move(id,delta){const ids=user.rankings?.length?[...user.rankings]:players.slice(0,220).map(p=>p.player_id); const i=ids.indexOf(id); if(i<0)return; const j=clamp(i+delta,0,ids.length-1); [ids[i],ids[j]]=[ids[j],ids[i]]; setUser(u=>({...u,rankings:ids}))} function updateTier(t,name){setUser(u=>({...u,tierNames:{...u.tierNames,[t]:name}}))} return <><section className="hero-card"><div className="hero-content"><span className="kicker">My Rankings</span><h2>Personal Board</h2><p>Polished board management with roster view, tier labels, mobile move buttons, and print/download cheat sheet tools.</p><div className="tag-row"><button className="primary-btn" onClick={initRankings}>Initialize / Reset Board</button><button className="ghost-btn" onClick={()=>window.print()}>Print Cheat Sheet</button><button className="ghost-btn" onClick={()=>downloadFile("gridiron-intel-cheat-sheet.html",cheatHtml(players,user),"text/html")}>Download Cheat Sheet</button></div></div></section><section className="rank-card"><div className="section-title"><h3>My Roster</h3><span className="pill">{roster.length} players</span></div>{roster.length===0?<p>Use “Add to My Roster” in a player Deep Dive or mark “My Pick” during Draft Day Mode.</p>:<div className="rank-list">{roster.map(p=><div className="roster-item" key={p.player_id}><span><b>{p.full_name}</b><br/><small>{p.position} · {p.team} · Score {p.composite_score}</small></span><button className="mini-btn" onClick={()=>setUser(u=>({...u,draft:{...u.draft,myRoster:u.draft.myRoster.filter(id=>id!==p.player_id)}}))}>Remove</button></div>)}</div>}</section><section className="rank-card"><div className="section-title"><h3>Tier Names</h3></div><div className="settings-grid">{[1,2,3,4,5,6].map(t=><div className="field" key={t}><label>Tier {t}</label><input className="small-input" value={user.tierNames?.[t]||""} onChange={e=>updateTier(t,e.target.value)}/></div>)}</div></section><section className="rank-card"><div className="filter-scroll">{POSITIONS.map(x=><button key={x} className={`chip ${pos===x?"active":""}`} onClick={()=>setPos(x)}>{x}</button>)}</div><div className="rank-list" style={{marginTop:10}}>{ranked.slice(0,180).map((p,i)=><div key={p.player_id} className="rank-item" style={{borderLeftColor:positionColor(p.position)}}><span className="drag-handle">≡</span><span style={{flex:1}} onClick={()=>openPlayer(p)}><b>{i+1}. {p.full_name}</b><br/><small className="meta">Tier {p.tier}: {user.tierNames?.[p.tier]} · {p.position} · {p.team} · Score {p.composite_score}</small></span><span className="tag-row"><button className="mini-btn" onClick={()=>move(p.player_id,-1)}>↑</button><button className="mini-btn" onClick={()=>move(p.player_id,1)}>↓</button></span></div>)}</div></section></>}
+function Settings({players,user,setUser,onClose,refreshPlayers,refreshTrends,toast,redditCache,setRedditCache}){const [rankText,setRankText]=useState(""); const [statsText,setStatsText]=useState(""); const [importText,setImportText]=useState(""); const redditCount=Object.keys(redditCache||{}).length; function exportData(){downloadFile(`gridiron-intel-backup-${new Date().toISOString().slice(0,10)}.json`,JSON.stringify({app:"Gridiron Intel",version:APP_VERSION,user,redditCache},null,2),"application/json")} function importData(){try{const parsed=JSON.parse(importText); setUser(deepMerge(defaultUser(),parsed.user||parsed)); if(parsed.redditCache)setRedditCache(parsed.redditCache); toast("Imported backup data"); setImportText("")}catch(e){toast("Backup import failed. Check JSON format.")}} return <div className="settings-backdrop"><aside className="settings-drawer"><div className="settings-head"><div><h2>Settings</h2><p>Film Room Phase A data, Scout Network cache, league setup, PWA info, and safer imports.</p></div><button className="icon-btn" onClick={onClose}>✕</button></div><div className="drawer-section"><h3>League Setup</h3><div className="settings-grid"><div className="field"><label>League Name</label><input className="small-input" value={user.settings.leagueName||""} onChange={e=>setUser(u=>({...u,settings:{...u.settings,leagueName:e.target.value}}))}/></div><div className="field"><label>Teams</label><input className="small-input" type="number" min="4" max="20" value={user.settings.teams} onChange={e=>setUser(u=>({...u,settings:{...u.settings,teams:clamp(safeNumber(e.target.value,12),4,20)}}))}/></div><div className="field"><label>Draft Slot</label><input className="small-input" type="number" min="1" max={user.settings.teams} value={user.settings.draftSlot} onChange={e=>setUser(u=>({...u,settings:{...u.settings,draftSlot:clamp(safeNumber(e.target.value,1),1,u.settings.teams||12)}}))}/></div></div></div><div className="drawer-section"><h3>Data Refresh</h3><div className="tag-row"><button className="primary-btn" onClick={refreshPlayers}>Refresh Player Database</button><button className="ghost-btn" onClick={refreshTrends}>Refresh Trends</button><button className="danger-btn" onClick={()=>{localStorage.removeItem(CACHE_PLAYERS);localStorage.removeItem(CACHE_TRENDS);toast("API cache cleared")}}>Clear API Cache</button></div></div><div className="drawer-section"><h3>📡 Scout Network Cache</h3><p>Cached Reddit/fan-buzz reports: <b>{redditCount}</b>. Player scans are on-demand only and cached locally.</p><div className="tag-row" style={{marginTop:10}}><button className="danger-btn" onClick={()=>{setRedditCache({}); localStorage.removeItem(CACHE_REDDIT); toast("Scout Network cache cleared")}}>Clear Fan Intel Cache</button></div></div><div className="drawer-section"><h3>Backup</h3><div className="tag-row"><button className="primary-btn" onClick={exportData}>Export My Data</button><button className="danger-btn" onClick={()=>{if(confirm("Clear notes, tags, rankings, roster, and imports?")){setUser(defaultUser());toast("User data reset")}}}>Reset User Data</button></div><div className="field"><label>Paste backup JSON</label><textarea className="textarea" value={importText} onChange={e=>setImportText(e.target.value)} placeholder="Paste exported JSON here..." /></div><button className="ghost-btn" onClick={importData}>Import Backup</button></div><div className="drawer-section"><h3>Import ECR / Rankings</h3><p>Paste lines like: <b>1, Ja'Marr Chase</b>. Names are normalized for punctuation and suffixes.</p><div className="field"><textarea className="textarea" value={rankText} onChange={e=>setRankText(e.target.value)} placeholder="1, Ja'Marr Chase&#10;2, Justin Jefferson" /></div><button className="ghost-btn" onClick={()=>{const updates=parseRankings(rankText,players); setUser(u=>({...u,ecr:{...u.ecr,...updates}}));toast(`Imported ${Object.keys(updates).length} ranking matches`)}}>Import Rankings</button></div><div className="drawer-section"><h3>Import Previous-Season Stats</h3><p>Paste CSV columns: Player, GP, PassYds, PassTD, RushYds, RushTD, Rec, Targets, RecYds, RecTD, Fumbles, PPR.</p><div className="field"><textarea className="textarea" value={statsText} onChange={e=>setStatsText(e.target.value)} placeholder="Player,GP,PassYds,PassTD,RushYds,RushTD,Rec,Targets,RecYds,RecTD,Fumbles,PPR" /></div><button className="ghost-btn" onClick={()=>{const updates=parseStatsCsv(statsText,players); setUser(u=>({...u,stats:{...u.stats,...updates}}));toast(`Imported ${Object.keys(updates).length} stat rows`)}}>Import Stats</button></div><div className="drawer-section"><h3>PWA / Offline</h3><p>The ZIP includes manifest, icon, and service worker files. Upload the full folder to Netlify, open it once online, and the shell can reopen offline with cached data.</p></div></aside></div>}
+function PrintSheet({players,user}){const html=cheatHtml(players,user); const body=html.match(/<body>([\s\S]*)<\/body>/)?.[1]||""; return <div className="print-sheet" dangerouslySetInnerHTML={{__html:body}} />}
+function App(){const [players,setPlayers]=useState([]); const [status,setStatus]=useState("Booting command center..."); const [progress,setProgress]=useState(10); const [user,setUser]=useState(()=>deepMerge(defaultUser(),loadJson(CACHE_USER,{}))); const [trends,setTrends]=useState({timestamp:null,addMap:{},dropMap:{}}); const [redditCache,setRedditCache]=useState(()=>loadJson(CACHE_REDDIT,{})); const [redditScan,setRedditScan]=useState({playerId:null,status:"idle",message:""}); const [active,setActive]=useState("draft"); const [query,setQuery]=useState(""); const [selected,setSelected]=useState(null); const [settings,setSettings]=useState(false); const [toastMsg,setToastMsg]=useState(""); function toast(m){setToastMsg(m); window.clearTimeout(window.__giToast); window.__giToast=setTimeout(()=>setToastMsg(""),2600)} useEffect(()=>{saveJson(CACHE_USER,user)},[user]); useEffect(()=>{saveJson(CACHE_REDDIT,redditCache)},[redditCache]); useEffect(()=>{loadPlayers(false); loadTrends(false); if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js?v=reddit-oauth-fix-1").then(reg=>reg.update&&reg.update()).catch(()=>{})}},[]); useEffect(()=>{if(!user.draft?.timerRunning)return; const id=setInterval(()=>setUser(u=>({...u,draft:{...u.draft,seconds:Math.max(0,(u.draft?.seconds||0)-1),timerRunning:(u.draft?.seconds||0)>1}})),1000); return ()=>clearInterval(id)},[user.draft?.timerRunning]); async function loadPlayers(force=false){setStatus(force?"Refreshing Sleeper database...":"Loading player database..."); setProgress(22); const cached=!force&&getFreshCache(CACHE_PLAYERS,MAX_PLAYER_CACHE_MS); if(cached?.players?.length){const processed=cached.players.map(p=>({...p,composite_score:calcScore(p,user)})); setPlayers(processed); setStatus(`Loaded ${processed.length} cached players`); setProgress(100); return} try{setProgress(38); const res=await fetch("https://api.sleeper.app/v1/players/nfl"); if(!res.ok)throw new Error("Sleeper fetch failed"); setProgress(72); const raw=await res.json(); const processed=processPlayers(raw,user); localStorage.setItem(CACHE_PLAYERS,JSON.stringify({timestamp:Date.now(),players:processed})); setPlayers(processed); setStatus(`Loaded ${processed.length} live Sleeper players`); setProgress(100)}catch(e){const stale=getFreshCache(CACHE_PLAYERS,365*24*60*60*1000); if(stale?.players?.length){const processed=stale.players.map(p=>({...p,composite_score:calcScore(p,user)})); setPlayers(processed); setStatus("Live fetch failed. Using saved cache."); setProgress(100)}else{const processed=processPlayers(FALLBACK_PLAYERS,user); setPlayers(processed); setStatus("Live fetch failed. Using demo fallback players."); setProgress(100)}}}
+async function loadTrends(force=false){const cached=!force&&getFreshCache(CACHE_TRENDS,MAX_TREND_CACHE_MS); if(cached){setTrends(cached);return} try{const [adds,drops]=await Promise.all([fetch("https://api.sleeper.app/v1/players/nfl/trending/add?lookback_hours=24&limit=50").then(r=>r.json()),fetch("https://api.sleeper.app/v1/players/nfl/trending/drop?lookback_hours=24&limit=50").then(r=>r.json())]); const payload={timestamp:Date.now(),addMap:normalizeTrendPayload(adds),dropMap:normalizeTrendPayload(drops)}; localStorage.setItem(CACHE_TRENDS,JSON.stringify(payload)); setTrends(payload); if(force)toast("Trends refreshed")}catch(e){if(force)toast("Trend refresh failed. Existing data kept.")}}
+async function scanReddit(player,force=false){const entry=redditCache?.[player.player_id]; if(!force && redditFresh(entry)){toast("Using cached Scout Network intel"); return} setRedditScan({playerId:player.player_id,status:"running",message:`Scanning ${player.full_name} fan chatter...`}); try{const data=await buildRedditIntel(player); cacheRedditIntel(setRedditCache,player.player_id,data); setRedditScan({playerId:player.player_id,status:"done",message:`Analyzed ${data.sentiment.postsAnalyzed} posts`}); toast(`Scout Network saved ${data.sentiment.postsAnalyzed} posts for ${player.full_name}`)}catch(e){setRedditScan({playerId:player.player_id,status:"error",message:e.message||"Reddit unavailable"}); toast("Reddit scan failed. Manual paste is still available.")}}
+function openPlayer(p){setSelected(p);setActive("deep")} const nav=[["draft","🏈","Draft"],["deep","🔎","Deep"],["waivers","🔥","Waivers"],["trades","⇄","Trades"],["my","⭐","My"]]; return <div className="app"><header className="topbar"><div className="brand-row"><div className="brand"><div className="brand-mark">GI</div><div><h1>Gridiron Intel</h1><p>{status}</p></div></div><div className="actions"><button className="icon-btn" title="Refresh" onClick={()=>{loadPlayers(true);loadTrends(true)}}>↻</button><button className="icon-btn" title="Settings" onClick={()=>setSettings(true)}>⚙️</button></div></div><div className="search-row"><div className="search-wrap"><span>⌕</span><input className="search-input" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search players, teams, positions..." /></div><div className="progress" title={status}><span style={{"--w":`${progress}%`}} /></div></div></header><main className="main">{active==="draft"&&<DraftBoard players={players} user={user} setUser={setUser} trends={trends} query={query} openPlayer={openPlayer} toast={toast} redditCache={redditCache}/>} {active==="deep"&&<DeepDive player={selected} user={user} setUser={setUser} trends={trends} goBack={()=>setActive("draft")} redditCache={redditCache} setRedditCache={setRedditCache} scanReddit={scanReddit} redditScan={redditScan} toast={toast}/>} {active==="waivers"&&<Waivers players={players} trends={trends} user={user} setUser={setUser} openPlayer={openPlayer} redditCache={redditCache}/>} {active==="trades"&&<Trades players={players} user={user} trends={trends} openPlayer={openPlayer}/>} {active==="my"&&<MyRankings players={players} user={user} setUser={setUser} toast={toast} openPlayer={openPlayer}/>}</main><nav className="bottom-nav">{nav.map(([id,icon,label])=><button key={id} className={`nav-btn ${active===id?"active":""}`} onClick={()=>setActive(id)}><b>{icon}</b>{label}</button>)}</nav>{settings&&<Settings players={players} user={user} setUser={setUser} onClose={()=>setSettings(false)} refreshPlayers={()=>loadPlayers(true)} refreshTrends={()=>loadTrends(true)} toast={toast} redditCache={redditCache} setRedditCache={setRedditCache}/>} {toastMsg&&<div className="toast">{toastMsg}</div>}<PrintSheet players={players} user={user}/></div>}
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+  </script>
+</body>
+</html>

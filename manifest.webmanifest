@@ -1,0 +1,19 @@
+{
+  "name": "Gridiron Intel",
+  "short_name": "Gridiron",
+  "description": "Fantasy football draft command center with Scout Network fan intel with proxy hardening",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0a0e17",
+  "theme_color": "#0a0e17",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
