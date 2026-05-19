@@ -252,8 +252,9 @@ async function main(){
   const players=rawPlayers.slice(0,650).map((p,i)=>normPlayer(p,i,stats.byName,addMap,dropMap,ecrMap));
 
   const espnStart=startHealth('espn_enrichment');
-  const espnTargets=players.filter(p=>p.espn_id).slice(0,ESPN_ENRICH_LIMIT); let enriched=0, espnStatsCount=0, espnProjectionCount=0, espnNewsCount=0;
+  const espnTargets=players.filter(p=>p.espn_id).slice(0,ESPN_ENRICH_LIMIT); let enriched=0, espnStatsCount=0, espnProjectionCount=0, espnNewsCount=0, espnAttempted=0, espnMatched=0;
   for(const p of espnTargets){
+    espnAttempted++;
     const [espnStatsRaw, espnProjectionRaw, newsRaw] = await Promise.all([
       safeJson(ESPN_STATS(p.espn_id, STAT_SEASON), `${p.full_name} ESPN stats`),
       safeJson(ESPN_PROJECTIONS(p.espn_id, PROJECTION_SEASON), `${p.full_name} ESPN projections`),
@@ -262,6 +263,7 @@ async function main(){
     const espnStats=collectESPNStats(espnStatsRaw); const espnProjection=collectESPNStats(espnProjectionRaw);
     if(espnStats){ espnStats.season = STAT_SEASON; espnStats.source = 'ESPN'; p.espn_stats_2025 = espnStats; p.stats_2025 = espnStats; p.source_status.espn_stats = true; espnStatsCount++; }
     if(espnProjection){ espnProjection.season = PROJECTION_SEASON; espnProjection.source = 'ESPN Projection'; p.projections_2026 = espnProjection; p.source_status.espn_projection = true; espnProjectionCount++; }
+    if(espnStats||espnProjection||newsRaw?.articles?.length) espnMatched++;
     if(newsRaw?.articles?.length){
       p.news=newsRaw.articles.slice(0,5).map(a=>({headline:a.headline, date:a.published, url:a.links?.web?.href || a.links?.api?.href || '', description:String(a.description||'').slice(0,220), source:a.source || 'ESPN'}));
       p.news_sentiment_score = newsSentiment(p.news); p.source_status.espn_news = true; p.source_status.news_sentiment = true; espnNewsCount++;
@@ -270,7 +272,10 @@ async function main(){
     if(enriched % 40 === 0) console.log(`ESPN enriched ${enriched}/${espnTargets.length}`);
     await sleep(SLEEP_MS);
   }
-  finishHealth('espn_enrichment', espnStart, true, enriched, `stats ${espnStatsCount}, projections ${espnProjectionCount}, news ${espnNewsCount}`);
+  const espnSuccessRate = espnAttempted ? Math.round((espnMatched / espnAttempted) * 100) : 0;
+  console.log(`ESPN enrichment: ${espnMatched}/${espnAttempted} (${espnSuccessRate}%) players matched`);
+  if(espnAttempted && espnSuccessRate < 20) console.warn('ESPN API may be sparse this run. Data deck will still build from the other sources.');
+  finishHealth('espn_enrichment', espnStart, true, enriched, `stats ${espnStatsCount}, projections ${espnProjectionCount}, news ${espnNewsCount}, matched ${espnSuccessRate}%`);
   for(const p of players) p.source_confidence = statConfidence(p);
 
   const sources=['sleeper_players','sleeper_trending','nflverse_stats','espn_stats','espn_projections','espn_news','fantasypros_ecr_optional','news_sentiment'];
