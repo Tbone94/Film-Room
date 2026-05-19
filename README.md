@@ -116,3 +116,7 @@ Full UX overhaul update: Option A navigation, Deep Dive overlay, onboarding, sea
 
 ## Mobile App Icon Patch
 This build explicitly includes manifest icons, Apple touch icons, favicon.ico, root apple-touch-icon.png, and service worker cache entries so phones use the Film Room icon when added to the home screen. After deploying, remove the old home-screen icon and re-add the app so iOS/Android refreshes the icon.
+
+
+## Killer Features Phase
+Added Positional Scarcity Visualizer, Drop-Off Analysis, Story Behind the Score, Confidence Score, and Roster Construction Coach. These features use existing local player/ranking/trend/roster data and do not require Reddit API approval.
