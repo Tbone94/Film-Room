@@ -1,7 +1,7 @@
 {
   "name": "Film Room",
   "short_name": "Film Room",
-  "description": "Film Room fantasy football draft command center with Scout Network visuals and Netlify-ready Reddit proxy support.",
+  "description": "Film Room fantasy football draft command center.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

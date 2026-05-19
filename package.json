@@ -1,8 +1,8 @@
 {
-  "name": "gridiron-intel-film-room",
+  "name": "film-room",
   "version": "4.1.0",
   "private": true,
-  "description": "Gridiron Intel fantasy football PWA with Netlify Function proxy for Scout Network fan intel.",
+  "description": "Film Room fantasy football draft command center.",
   "scripts": {
     "build": "node -e \"console.log('Gridiron Intel static build: no bundling required')\""
   },
