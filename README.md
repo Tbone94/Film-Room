@@ -124,3 +124,8 @@ Added Positional Scarcity Visualizer, Drop-Off Analysis, Story Behind the Score,
 
 ## v5 Phase 1 Product Cleanup
 Removed prototype/developer copy, tightened section heroes, simplified Settings, added brand typography, reduced visual noise, shortened toasts, renamed Buzz Lens to Market Buzz, and kept existing draft tools stable.
+
+
+## Multi-Source Data Phase 1
+
+This build includes a daily GitHub Action and `scripts/fetch-all-sources.js` to generate `data/players.json` from Sleeper player data, Sleeper add/drop trends, nflverse previous-season stats, and ESPN headlines. The app loads `data/players.json` first and falls back to live Sleeper if the data deck has not been generated yet.

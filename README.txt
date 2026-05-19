@@ -76,3 +76,8 @@ Removed prototype/developer copy, tightened section heroes, simplified Settings,
 
 
 v5 Phase 2: added Player Intel architecture, curated starter scouting reports, richer fallbacks, ESPN latest news panel, and handcuff quick reference.
+
+
+## Multi-Source Data Phase 1
+
+This build includes a daily GitHub Action and `scripts/fetch-all-sources.js` to generate `data/players.json` from Sleeper player data, Sleeper add/drop trends, nflverse previous-season stats, and ESPN headlines. The app loads `data/players.json` first and falls back to live Sleeper if the data deck has not been generated yet.
