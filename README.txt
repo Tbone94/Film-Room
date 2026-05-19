@@ -81,3 +81,10 @@ v5 Phase 2: added Player Intel architecture, curated starter scouting reports, r
 ## Multi-Source Data Phase 1
 
 This build includes a daily GitHub Action and `scripts/fetch-all-sources.js` to generate `data/players.json` from Sleeper player data, Sleeper add/drop trends, nflverse previous-season stats, and ESPN headlines. The app loads `data/players.json` first and falls back to live Sleeper if the data deck has not been generated yet.
+
+
+## v5 Multi-Source Phase 3
+- Adds optional FantasyPros ECR parsing in the daily data builder.
+- Adds source health diagnostics and source counts to data/players.json.
+- Adds news sentiment scoring and stronger confidence/source display.
+- All optional sources are non-blocking; Sleeper + static fallback remain intact.

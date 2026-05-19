@@ -1,8 +1,8 @@
 {
   "name": "film-room",
-  "version": "5.4.0",
+  "version": "5.5.0",
   "private": true,
-  "description": "Film Room fantasy football draft command center with daily multi-source ESPN/nflverse/Sleeper data deck support.",
+  "description": "Film Room fantasy football command center with daily multi-source player data, optional expert consensus, source health, and transparent scoring.",
   "scripts": {
     "build": "node -e \"console.log('Film Room static build: no bundling required')\"",
     "refresh:data": "node scripts/fetch-all-sources.js"
