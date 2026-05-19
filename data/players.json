@@ -1,7 +1,9 @@
 {
   "updated": null,
+  "phase": "multi-source-phase2",
   "sources": [],
+  "source_counts": {},
   "player_count": 0,
   "players": [],
-  "note": "Seed file. GitHub Action refreshes this with Sleeper, nflverse, ESPN news, and trend data."
+  "note": "Seed file. GitHub Action refreshes this with Sleeper, Sleeper trends, nflverse stats, ESPN stats, ESPN projections, and ESPN news."
 }

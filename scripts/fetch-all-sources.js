@@ -1,39 +1,56 @@
 import { writeFileSync, mkdirSync } from 'fs';
 
-const SEASON = Number(process.env.FILM_ROOM_STATS_SEASON || new Date().getUTCFullYear() - 1);
+const NOW = new Date();
+const STAT_SEASON = Number(process.env.FILM_ROOM_STATS_SEASON || NOW.getUTCFullYear() - 1);
+const PROJECTION_SEASON = Number(process.env.FILM_ROOM_PROJECTION_SEASON || NOW.getUTCFullYear());
 const SLEEPER_URL = 'https://api.sleeper.app/v1/players/nfl';
 const SLEEPER_TREND_ADD = 'https://api.sleeper.app/v1/players/nfl/trending/add?lookback_hours=24&limit=50';
 const SLEEPER_TREND_DROP = 'https://api.sleeper.app/v1/players/nfl/trending/drop?lookback_hours=24&limit=50';
 const NFLVERSE_WEEKLY = season => `https://github.com/nflverse/nflverse-data/releases/download/player_stats/stats_player_week_${season}.csv`;
 const ESPN_NEWS = id => `https://site.api.espn.com/apis/site/v2/sports/football/nfl/news?athlete=${id}&limit=5`;
+const ESPN_STATS = (id, season = STAT_SEASON) => `https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/${season}/types/2/athletes/${id}/statistics`;
+const ESPN_PROJECTIONS = (id, season = PROJECTION_SEASON) => `https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/${season}/types/2/athletes/${id}/projections`;
 
 const FANTASY_POSITIONS = new Set(['QB','RB','WR','TE','K','DEF','DST']);
-const ENRICH_NEWS_LIMIT = Number(process.env.FILM_ROOM_NEWS_LIMIT || 180);
-const SLEEP_MS = Number(process.env.FILM_ROOM_NEWS_SLEEP_MS || 250);
+const ESPN_ENRICH_LIMIT = Number(process.env.FILM_ROOM_ESPN_ENRICH_LIMIT || 240);
+const SLEEP_MS = Number(process.env.FILM_ROOM_SOURCE_SLEEP_MS || 350);
+const MIN_SLEEPER_PLAYERS = Number(process.env.FILM_ROOM_MIN_PLAYERS || 100);
 
 function sleep(ms){ return new Promise(resolve => setTimeout(resolve, ms)); }
 function normalizeName(value=''){
   return String(value).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\b(jr|sr|ii|iii|iv|v)\b/g,'').replace(/\s+/g,' ').trim();
 }
-async function safeJson(url){
+async function safeJson(url, label = 'json'){
   try{
-    const response = await fetch(url, { headers: { 'User-Agent': 'FilmRoom/5.3 daily data builder', 'Accept':'application/json,text/plain,*/*' } });
-    if(!response.ok) return null;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 18000);
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: { 'User-Agent': 'FilmRoom/5.4 daily multi-source data builder', 'Accept':'application/json,text/plain,*/*' }
+    });
+    clearTimeout(timeout);
+    if(!response.ok){ console.warn(`${label} returned ${response.status}`); return null; }
     const text = await response.text();
-    if(text.trim().startsWith('<')) return null;
+    if(text.trim().startsWith('<')){ console.warn(`${label} returned HTML`); return null; }
     return JSON.parse(text);
   }catch(error){
-    console.warn(`JSON fetch failed: ${url}`, error.message);
+    console.warn(`${label} fetch failed:`, error.message);
     return null;
   }
 }
-async function safeText(url){
+async function safeText(url, label = 'text'){
   try{
-    const response = await fetch(url, { headers: { 'User-Agent': 'FilmRoom/5.3 daily data builder', 'Accept':'text/csv,text/plain,*/*' } });
-    if(!response.ok) return '';
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 22000);
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: { 'User-Agent': 'FilmRoom/5.4 daily multi-source data builder', 'Accept':'text/csv,text/plain,*/*' }
+    });
+    clearTimeout(timeout);
+    if(!response.ok){ console.warn(`${label} returned ${response.status}`); return ''; }
     return await response.text();
   }catch(error){
-    console.warn(`Text fetch failed: ${url}`, error.message);
+    console.warn(`${label} fetch failed:`, error.message);
     return '';
   }
 }
@@ -55,15 +72,66 @@ function parseCsv(text){
   return rows.filter(r=>r.length).map(values=>Object.fromEntries(heads.map((h,i)=>[h,values[i]||''])));
 }
 function num(row,key){ const n=Number(row?.[key]); return Number.isFinite(n)?n:0; }
-function add(acc,key,value){ acc[key]=(acc[key]||0)+value; }
-function pprFallback(acc, pos){
+function add(acc,key,value){ acc[key]=Number((acc[key]||0)+value); }
+function pprFromLine(acc, pos){
   if(acc.fantasy_points_ppr) return acc.fantasy_points_ppr;
-  if(pos==='QB') return acc.passing_yards*.04 + acc.passing_tds*4 + acc.rushing_yards*.1 + acc.rushing_tds*6 - acc.interceptions*2;
-  return acc.rushing_yards*.1 + acc.rushing_tds*6 + acc.receptions + acc.receiving_yards*.1 + acc.receiving_tds*6;
+  if(pos==='QB') return acc.passing_yards*.04 + acc.passing_tds*4 + acc.rushing_yards*.1 + acc.rushing_tds*6 - acc.interceptions*2 - acc.fumbles*2;
+  return acc.rushing_yards*.1 + acc.rushing_tds*6 + acc.receptions + acc.receiving_yards*.1 + acc.receiving_tds*6 - acc.fumbles*2;
+}
+function compactStatLine(stat){
+  if(!stat) return null;
+  const out = {};
+  for(const [k,v] of Object.entries(stat)){
+    if(v === null || v === undefined || v === '') continue;
+    out[k] = typeof v === 'number' ? Number(v.toFixed ? v.toFixed(2) : v) : v;
+  }
+  return Object.keys(out).length ? out : null;
+}
+function mapESPNName(rawName=''){
+  const key=String(rawName).toLowerCase().replace(/[^a-z0-9]/g,'');
+  const map = {
+    gamesplayed:'games', games:'games', gp:'games', appearances:'games',
+    completions:'completions', passingattempts:'passing_attempts', attempts:'passing_attempts',
+    passingyards:'passing_yards', passyards:'passing_yards', yards:'passing_yards',
+    passingtouchdowns:'passing_tds', passingtds:'passing_tds', touchdowns:'passing_tds',
+    interceptions:'interceptions', passinginterceptions:'interceptions',
+    rushingattempts:'carries', rushingcarries:'carries', carries:'carries',
+    rushingyards:'rushing_yards', rushingtouchdowns:'rushing_tds', rushingtds:'rushing_tds',
+    receptions:'receptions', receivingreceptions:'receptions', receivingtargets:'targets', targets:'targets',
+    receivingyards:'receiving_yards', receivingtouchdowns:'receiving_tds', receivingtds:'receiving_tds',
+    fumbleslost:'fumbles', fumbles:'fumbles', lostfumbles:'fumbles',
+    fantasyPoints:'fantasy_points_ppr', fantasypoints:'fantasy_points_ppr', fantasypts:'fantasy_points_ppr',
+    totalpoints:'fantasy_points_ppr', points:'fantasy_points_ppr'
+  };
+  return map[key] || null;
+}
+function collectESPNStats(raw){
+  if(!raw) return null;
+  const out = { source: 'ESPN' };
+  const scan = value => {
+    if(Array.isArray(value)) value.forEach(scan);
+    else if(value && typeof value === 'object'){
+      const statName = value.name || value.shortName || value.displayName || value.abbreviation;
+      if(statName && value.value !== undefined){
+        const normalized = mapESPNName(statName);
+        const n = Number(value.value);
+        if(normalized && Number.isFinite(n)) out[normalized] = n;
+      }
+      for(const child of Object.values(value)){
+        if(child && (Array.isArray(child) || typeof child === 'object')) scan(child);
+      }
+    }
+  };
+  scan(raw);
+  if(out.games === undefined && raw?.statistics?.splits?.length) out.games = raw.statistics.splits.length;
+  const has = Object.entries(out).some(([k,v]) => k !== 'source' && Number(v) > 0);
+  if(!has) return null;
+  out.fantasy_points_ppr = Number(pprFromLine(out, out.position || 'FLEX').toFixed(2));
+  return compactStatLine(out);
 }
 async function fetchWeeklyStats(){
-  for(const season of [SEASON, SEASON-1, SEASON-2]){
-    const text=await safeText(NFLVERSE_WEEKLY(season));
+  for(const season of [STAT_SEASON, STAT_SEASON-1, STAT_SEASON-2]){
+    const text=await safeText(NFLVERSE_WEEKLY(season), `nflverse ${season}`);
     if(!text || text.trim().startsWith('<')) continue;
     const rows=parseCsv(text);
     if(!rows.length) continue;
@@ -74,7 +142,7 @@ async function fetchWeeklyStats(){
       if(!name || !['QB','RB','WR','TE'].includes(position)) continue;
       const key=normalizeName(name); if(!key) continue;
       if(!byName[key]){
-        byName[key]={season, player_name:name, position, team:row.recent_team||row.team||row.posteam||'', games:0, fantasy_points_ppr:0, carries:0, rushing_yards:0, rushing_tds:0, receptions:0, targets:0, receiving_yards:0, receiving_tds:0, passing_yards:0, passing_tds:0, interceptions:0, fumbles:0};
+        byName[key]={season, source:'nflverse', player_name:name, position, team:row.recent_team||row.team||row.posteam||'', games:0, fantasy_points_ppr:0, carries:0, rushing_yards:0, rushing_tds:0, receptions:0, targets:0, receiving_yards:0, receiving_tds:0, passing_yards:0, passing_tds:0, interceptions:0, fumbles:0};
         weeks[key]=new Set();
       }
       const acc=byName[key];
@@ -93,21 +161,31 @@ async function fetchWeeklyStats(){
       add(acc,'interceptions',num(row,'interceptions'));
       add(acc,'fumbles',num(row,'fumbles_lost')||num(row,'sack_fumbles_lost'));
     }
-    for(const stat of Object.values(byName)) stat.fantasy_points_ppr = Number(pprFallback(stat, stat.position).toFixed(2));
+    for(const stat of Object.values(byName)) stat.fantasy_points_ppr = Number(pprFromLine(stat, stat.position).toFixed(2));
     return { season, byName };
   }
-  return { season: SEASON, byName: {} };
+  return { season: STAT_SEASON, byName: {} };
 }
 function playerPasses(p){
   const positions=p.fantasy_positions || (p.position ? [p.position] : []);
   const pos=p.position==='DST'?'DEF':p.position;
   return p && p.active !== false && (p.team || pos==='DEF') && positions.some(x=>FANTASY_POSITIONS.has(x));
 }
+function statConfidence(player){
+  let count = 0;
+  if(player.stats_2025) count++;
+  if(player.espn_stats_2025) count++;
+  if(player.projections_2026) count++;
+  if(player.news?.length) count++;
+  if(player.trending_adds || player.trending_drops) count++;
+  if(player.depth_chart_position) count++;
+  return Math.min(98, 38 + count * 10);
+}
 function normPlayer(p, index, statsMap, addMap, dropMap){
   const pos=p.position==='DST'?'DEF':p.position;
   const name=p.full_name || `${p.first_name||''} ${p.last_name||''}`.trim() || String(p.player_id);
   const key=normalizeName(name);
-  const stats=statsMap[key] || null;
+  const nflverseStats=statsMap[key] || null;
   return {
     player_id:String(p.player_id||p.sleeper_id||name),
     full_name:name,
@@ -126,35 +204,82 @@ function normPlayer(p, index, statsMap, addMap, dropMap){
     adp:p.search_rank || index + 1,
     trending_adds:addMap[String(p.player_id)] || 0,
     trending_drops:dropMap[String(p.player_id)] || 0,
-    stats_2025:stats,
+    nflverse_stats_2025:nflverseStats,
+    stats_2025:nflverseStats,
+    espn_stats_2025:null,
+    projections_2026:null,
     news:[],
+    source_status:{sleeper:true,nflverse:!!nflverseStats,espn_stats:false,espn_projection:false,espn_news:false,trending:!!(addMap[String(p.player_id)]||dropMap[String(p.player_id)])},
     last_updated:new Date().toISOString()
   };
 }
 async function main(){
-  console.log('Film Room data refresh started');
+  console.log('Film Room multi-source Phase 2 data refresh started');
   const [sleeperRaw, addsRaw, dropsRaw, stats] = await Promise.all([
-    safeJson(SLEEPER_URL), safeJson(SLEEPER_TREND_ADD), safeJson(SLEEPER_TREND_DROP), fetchWeeklyStats()
+    safeJson(SLEEPER_URL, 'Sleeper players'), safeJson(SLEEPER_TREND_ADD, 'Sleeper adds'), safeJson(SLEEPER_TREND_DROP, 'Sleeper drops'), fetchWeeklyStats()
   ]);
   const addMap={}; (Array.isArray(addsRaw)?addsRaw:[]).forEach(x=>{ if(x.player_id) addMap[String(x.player_id)]=Number(x.count||0); });
   const dropMap={}; (Array.isArray(dropsRaw)?dropsRaw:[]).forEach(x=>{ if(x.player_id) dropMap[String(x.player_id)]=Number(x.count||0); });
   const rawPlayers=Object.values(sleeperRaw||{}).filter(playerPasses).sort((a,b)=>(a.search_rank||999)-(b.search_rank||999));
-  let players=rawPlayers.slice(0,600).map((p,i)=>normPlayer(p,i,stats.byName,addMap,dropMap));
-  const newsTargets=players.filter(p=>p.espn_id).slice(0,ENRICH_NEWS_LIMIT);
-  let done=0;
-  for(const p of newsTargets){
-    const data=await safeJson(ESPN_NEWS(p.espn_id));
-    if(data?.articles?.length){
-      p.news=data.articles.slice(0,5).map(a=>({headline:a.headline, date:a.published, url:a.links?.web?.href || a.links?.api?.href || '', description:String(a.description||'').slice(0,220), source:a.source || 'ESPN'}));
+  if(rawPlayers.length < MIN_SLEEPER_PLAYERS){
+    throw new Error(`Too few Sleeper players fetched (${rawPlayers.length}); refusing to overwrite data/players.json`);
+  }
+  const players=rawPlayers.slice(0,650).map((p,i)=>normPlayer(p,i,stats.byName,addMap,dropMap));
+  const espnTargets=players.filter(p=>p.espn_id).slice(0,ESPN_ENRICH_LIMIT);
+  let enriched=0;
+  for(const p of espnTargets){
+    const [espnStatsRaw, espnProjectionRaw, newsRaw] = await Promise.all([
+      safeJson(ESPN_STATS(p.espn_id, STAT_SEASON), `${p.full_name} ESPN stats`),
+      safeJson(ESPN_PROJECTIONS(p.espn_id, PROJECTION_SEASON), `${p.full_name} ESPN projections`),
+      safeJson(ESPN_NEWS(p.espn_id), `${p.full_name} ESPN news`)
+    ]);
+    const espnStats=collectESPNStats(espnStatsRaw);
+    const espnProjection=collectESPNStats(espnProjectionRaw);
+    if(espnStats){
+      espnStats.season = STAT_SEASON;
+      espnStats.source = 'ESPN';
+      p.espn_stats_2025 = espnStats;
+      p.stats_2025 = espnStats; // ESPN is preferred when available; nflverse stays preserved separately.
+      p.source_status.espn_stats = true;
     }
-    done++;
-    if(done % 50 === 0) console.log(`News enriched ${done}/${newsTargets.length}`);
+    if(espnProjection){
+      espnProjection.season = PROJECTION_SEASON;
+      espnProjection.source = 'ESPN Projection';
+      p.projections_2026 = espnProjection;
+      p.source_status.espn_projection = true;
+    }
+    if(newsRaw?.articles?.length){
+      p.news=newsRaw.articles.slice(0,5).map(a=>({headline:a.headline, date:a.published, url:a.links?.web?.href || a.links?.api?.href || '', description:String(a.description||'').slice(0,220), source:a.source || 'ESPN'}));
+      p.source_status.espn_news = true;
+    }
+    p.source_confidence = statConfidence(p);
+    enriched++;
+    if(enriched % 40 === 0) console.log(`ESPN enriched ${enriched}/${espnTargets.length}`);
     await sleep(SLEEP_MS);
   }
-  const sources=['sleeper_players','sleeper_trending','nflverse_stats','espn_news'];
-  const payload={updated:new Date().toISOString(), sources, player_count:players.length, stat_season:stats.season, players};
+  for(const p of players) p.source_confidence = statConfidence(p);
+  const sources=['sleeper_players','sleeper_trending','nflverse_stats','espn_stats','espn_projections','espn_news'];
+  const source_counts={
+    sleeper_players:players.length,
+    sleeper_trending:players.filter(p=>p.trending_adds||p.trending_drops).length,
+    nflverse_stats:players.filter(p=>p.nflverse_stats_2025).length,
+    espn_stats:players.filter(p=>p.espn_stats_2025).length,
+    espn_projections:players.filter(p=>p.projections_2026).length,
+    espn_news:players.filter(p=>p.news?.length).length
+  };
+  const payload={
+    updated:new Date().toISOString(),
+    phase:'multi-source-phase2',
+    sources,
+    source_counts,
+    player_count:players.length,
+    stat_season:stats.season,
+    projection_season:PROJECTION_SEASON,
+    players
+  };
   mkdirSync('data',{recursive:true});
   writeFileSync('data/players.json', JSON.stringify(payload,null,2));
-  console.log(`Done. Wrote ${players.length} players. Stats matched: ${players.filter(p=>p.stats_2025).length}.`);
+  console.log(`Done. Wrote ${players.length} players.`);
+  console.log('Source counts:', source_counts);
 }
 main().catch(error=>{ console.error(error); process.exit(1); });
