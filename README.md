@@ -95,3 +95,12 @@ Phone/PWA:
 ```txt
 Remove the home-screen app → clear browser site data for the Netlify URL → reinstall after the new deploy works.
 ```
+
+
+Update 4.2 Navigation + Buzz:
+- Removed Deep from bottom nav; player cards now open Deep Dive as a contextual overlay.
+- Added Reddit Buzz Lens: automatic non-scraping buzz score from Sleeper trends, value gap, tags, role profile, and risk signals.
+- Added quick Reddit search links for team subreddit, r/fantasyfootball, and r/nfl manual research.
+
+
+Full UX overhaul update: Option A navigation, Deep Dive overlay, onboarding, search dropdown, smart filters, improved player cards, Buzz Lens, quick Reddit research links, dual trade search, waiver context cards, My Rankings tier dividers/jump controls/batch tagging, loading skeletons, haptic tag feedback, and updated PWA cache version.

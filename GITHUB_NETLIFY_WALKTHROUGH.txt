@@ -55,3 +55,9 @@ PART 6 — TEST IN THE APP
 3. Scroll to Fan Base Intel.
 4. Click Scan Player.
 5. If Reddit blocks upstream access, use Manual Paste fallback.
+
+
+Update 4.2 Navigation + Buzz:
+- Removed Deep from bottom nav; player cards now open Deep Dive as a contextual overlay.
+- Added Reddit Buzz Lens: automatic non-scraping buzz score from Sleeper trends, value gap, tags, role profile, and risk signals.
+- Added quick Reddit search links for team subreddit, r/fantasyfootball, and r/nfl manual research.

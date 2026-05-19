@@ -1,4 +1,4 @@
-const CACHE_NAME = 'film-room-v4-1-visual-cleanup';
+const CACHE_NAME = 'film-room-v4-2-navigation-buzz';
 const SHELL_FILES = ['./','./index.html','./manifest.webmanifest','./icon.svg','./assets/logo/logo-icon-192.png','./assets/logo/logo-icon-512.png'];
 
 self.addEventListener('install', event => {
