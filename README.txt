@@ -53,3 +53,15 @@ Update 4.2 Navigation + Buzz:
 
 
 Full UX overhaul update: Option A navigation, Deep Dive overlay, onboarding, search dropdown, smart filters, improved player cards, Buzz Lens, quick Reddit research links, dual trade search, waiver context cards, My Rankings tier dividers/jump controls/batch tagging, loading skeletons, haptic tag feedback, and updated PWA cache version.
+
+
+## Mobile Polish Pass
+- Simplified Board controls into a calmer mobile-first Board Control card.
+- Moved advanced sort/tag/view/cheat-sheet controls behind a More toggle.
+- Reduced front-page button clutter while preserving all power features.
+- Improved position filtering with a single select plus optional quick chips.
+- Updated PWA/service worker cache version.
+
+
+## Mobile App Icon Patch
+This build explicitly includes manifest icons, Apple touch icons, favicon.ico, root apple-touch-icon.png, and service worker cache entries so phones use the Film Room icon when added to the home screen. After deploying, remove the old home-screen icon and re-add the app so iOS/Android refreshes the icon.

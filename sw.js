@@ -1,5 +1,5 @@
-const CACHE_NAME = 'film-room-v4-2-navigation-buzz';
-const SHELL_FILES = ['./','./index.html','./manifest.webmanifest','./icon.svg','./assets/logo/logo-icon-192.png','./assets/logo/logo-icon-512.png'];
+const CACHE_NAME = 'film-room-v4-3-1-mobile-icon-polish';
+const SHELL_FILES = ['./','./index.html','./manifest.webmanifest','./icon.svg','./favicon.ico','./apple-touch-icon.png','./assets/logo/logo-icon-32.png','./assets/logo/logo-icon-120.png','./assets/logo/logo-icon-152.png','./assets/logo/logo-icon-167.png','./assets/logo/logo-icon-180.png','./assets/logo/logo-icon-192.png','./assets/logo/logo-icon-512.png'];
 
 self.addEventListener('install', event => {
   event.waitUntil(
