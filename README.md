@@ -41,7 +41,7 @@ Open `http://localhost:8080`.
 To test the scraper locally:
 
 ```bash
-pip install -r requirements.txt
+pip install -r no root requirements.txt
 python scripts/scrape-commanders-reddit.py
 ```
 
@@ -51,3 +51,8 @@ The scraper is a best-effort public community signal, not an official report or 
 ## Visual refresh
 
 This build swaps out the old Film Room imagery and uses the newer custom burgundy/gold visual pack supplied by the user for hero and card backgrounds.
+
+
+## Netlify dependency note
+
+There is intentionally no root `requirements.txt` file in this build. Netlify should only run the static app build. The GitHub Action scraper uses Python standard-library public Reddit JSON requests, so it does not need `yars` or any pip dependency install.

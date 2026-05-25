@@ -8,7 +8,7 @@ Designed to run in GitHub Actions. No Reddit account, OAuth token, or API key is
 Notes:
 - This is a best-effort community buzz signal, not a factual truth source.
 - The output intentionally avoids storing usernames and long post bodies.
-- If Reddit/YARS fails, the script still writes a valid JSON file with error details.
+- If Reddit public JSON requests fail, the script still writes a valid JSON file with error details.
 """
 
 from __future__ import annotations
@@ -18,24 +18,18 @@ import os
 import re
 import sys
 import time
+import urllib.parse
 import urllib.request
 from collections import defaultdict
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
-try:
-    from yars import YARS
-except ImportError:
-    print("ERROR: yars is not installed. Run: pip install -r requirements.txt")
-    sys.exit(1)
-
 OUTPUT_PATH = "data/reddit-pulse.json"
 HISTORY_PATH = "data/reddit-pulse-history.json"
 TEAM_ID_ESPN = 28
-DELAY_BETWEEN_REQUESTS = 4
+DELAY_BETWEEN_REQUESTS = 3
 SELFTEXT_MAX = 280
 STALE_AFTER_HOURS = 72
-
-miner = YARS()
+REDDIT_USER_AGENT = "CommandersPulse/1.0 by tgiamberini95"
 
 SUBS_TO_SCAN = [
     {
@@ -401,17 +395,58 @@ def generate_pulse_summary(sentiment: Dict[str, Any], hot_topics: List[Dict[str,
     return summary
 
 
+def reddit_request(url: str) -> Dict[str, Any]:
+    """Fetch a Reddit public JSON endpoint using only the Python standard library."""
+    request = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": REDDIT_USER_AGENT,
+            "Accept": "application/json",
+        },
+    )
+    with urllib.request.urlopen(request, timeout=18) as response:
+        charset = response.headers.get_content_charset() or "utf-8"
+        return json.loads(response.read().decode(charset, errors="replace"))
+
+
+def children_to_posts(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+    children = payload.get("data", {}).get("children", [])
+    posts = []
+    for child in children:
+        if not isinstance(child, dict):
+            continue
+        data = child.get("data")
+        if isinstance(data, dict):
+            posts.append(data)
+    return posts
+
+
+def fetch_subreddit_category(subreddit: str, category: str, limit: int) -> List[Dict[str, Any]]:
+    category = category.lower().strip()
+    time_query = "&t=week" if category == "top" else ""
+    url = f"https://www.reddit.com/r/{subreddit}/{category}.json?limit={int(limit)}{time_query}"
+    return children_to_posts(reddit_request(url))
+
+
+def search_subreddit(subreddit: str, query: str, limit: int) -> List[Dict[str, Any]]:
+    encoded_query = urllib.parse.quote_plus(query)
+    url = (
+        f"https://www.reddit.com/r/{subreddit}/search.json"
+        f"?q={encoded_query}&restrict_sr=1&sort=relevance&t=week&limit={int(limit)}"
+    )
+    return children_to_posts(reddit_request(url))
+
+
 def scrape_subreddit(config: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], List[str]]:
     posts: List[Dict[str, Any]] = []
     errors: List[str] = []
 
     for category in config.get("fetch_categories", []):
         try:
-            raw = miner.fetch_subreddit_posts(
+            raw = fetch_subreddit_category(
                 config["subreddit"],
-                limit=config.get("fetch_limit", 25),
-                category=category,
-                time_filter="week" if category == "top" else "all",
+                category,
+                config.get("fetch_limit", 25),
             )
             for item in raw or []:
                 normalized = normalize_post(item)
@@ -427,14 +462,18 @@ def scrape_subreddit(config: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], List
 
     for query in config.get("search_queries", []):
         try:
-            raw = miner.search_reddit(query, limit=config.get("search_limit", 10))
+            raw = search_subreddit(
+                config["subreddit"],
+                query,
+                config.get("search_limit", 10),
+            )
             for item in raw or []:
                 normalized = normalize_post(item)
                 if not normalized:
                     continue
                 subreddit = (normalized.get("subreddit") or "").lower()
                 target = config["subreddit"].lower()
-                if subreddit == target or config["key"] in {"nfl_commanders", "fantasy_commanders"}:
+                if subreddit == target:
                     normalized["source_category"] = f"search:{query}"
                     posts.append(normalized)
             print(f"    search '{query}': {len(raw or [])} results")
