@@ -1,17 +1,53 @@
-# Film Room v6 Working Overhaul
+# Commanders Pulse
 
-This build focuses on making Film Room useful immediately on draft day:
+A fresh Washington Commanders fan dashboard powered by a scheduled GitHub Action that writes `data/reddit-pulse.json`.
 
-- Loads the daily multi-source player deck when available
-- Falls back to live Sleeper player data if the deck is empty
-- Adds on-demand ESPN fetches inside Deep Dive for missing stats, projections, and news
-- Shows a clear Source Breakdown for Projection, Production, Market, Movement, News, and Context
-- Adds position-specific stat cards
-- Tightens the broadcast-style card/navigation design
+## What is included
 
-## After upload
+- Fresh static app in `index.html`
+- Commanders Pulse mood meter
+- Hot topics board
+- Player buzz rankings
+- Hype vs concern cards
+- Community headline list
+- Admin manual-paste fallback
+- PWA manifest/icons
+- GitHub Action: `.github/workflows/scrape-reddit.yml`
+- Python scraper: `scripts/scrape-commanders-reddit.py`
+- Seed files: `data/reddit-pulse.json` and `data/reddit-pulse-history.json`
 
-1. Upload the contents of this folder to the GitHub repo root.
-2. Run `Actions → Refresh Film Room Data → Run workflow`.
-3. Wait for Netlify to redeploy.
-4. Open the app and test player cards / Deep Dive.
+## Deploy
+
+Netlify publish directory should be the repo root / `.`. The ZIP has `index.html` at the root.
+
+## Run the pulse builder
+
+1. Push this project to GitHub.
+2. Go to GitHub → Actions → **Build Commanders Pulse**.
+3. Click **Run workflow**.
+4. Wait for the workflow to commit `data/reddit-pulse.json`.
+5. Refresh the Netlify site.
+
+No Reddit username, password, OAuth token, or app approval is needed for this version.
+
+## Local testing
+
+```bash
+python -m http.server 8080
+```
+
+Open `http://localhost:8080`.
+
+To test the scraper locally:
+
+```bash
+pip install -r requirements.txt
+python scripts/scrape-commanders-reddit.py
+```
+
+The scraper is a best-effort public community signal, not an official report or a factual player evaluation.
+
+
+## Visual refresh
+
+This build swaps out the old Film Room imagery and uses the newer custom burgundy/gold visual pack supplied by the user for hero and card backgrounds.

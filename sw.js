@@ -1,5 +1,20 @@
-const CACHE_NAME = 'film-room-v6-complete-redesign-fixed-3';
-const SHELL_FILES = ['./','./index.html','./manifest.webmanifest','./icon.svg','./favicon.ico','./apple-touch-icon.png','./assets/logo/logo-icon-32.png','./assets/logo/logo-icon-120.png','./assets/logo/logo-icon-152.png','./assets/logo/logo-icon-167.png','./assets/logo/logo-icon-180.png','./assets/logo/logo-icon-192.png','./assets/logo/logo-icon-512.png', './data/players.json','./assets/broadcast/on-air-wide.png','./assets/broadcast/viz-confident.png','./assets/broadcast/tier-1.png'];
+const CACHE_NAME = 'commanders-pulse-v1';
+const SHELL_FILES = [
+  './',
+  './index.html',
+  './manifest.webmanifest',
+  './favicon.ico',
+  './apple-touch-icon.png',
+  './assets/logo/logo-icon-192.png',
+  './assets/logo/logo-icon-512.png',
+  './assets/mascot/viz-hero.png',
+  './assets/mascot/viz-analyzing.png',
+  './assets/mascot/viz-celebration.png',
+  './assets/mascot/viz-warning.png',
+  './assets/backgrounds/bg-card.png',
+  './assets/backgrounds/bg-studio.png',
+  './data/reddit-pulse.json'
+];
 
 self.addEventListener('install', event => {
   event.waitUntil(
@@ -21,33 +36,27 @@ self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
 
-  // Never answer API/function requests with cached index.html. That caused the "Unexpected token '<'" issue.
   if (url.pathname.startsWith('/.netlify/functions/')) {
     event.respondWith(fetch(event.request));
     return;
   }
 
-  // Only use app-shell fallback for page navigations, not JSON/API requests.
-  if (event.request.mode === 'navigate') {
+  if (url.pathname.endsWith('/data/reddit-pulse.json') || url.pathname.endsWith('/data/reddit-pulse-history.json')) {
     event.respondWith(
       fetch(event.request)
         .then(response => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put('./index.html', copy));
+          if (response.ok) caches.open(CACHE_NAME).then(cache => cache.put(event.request, response.clone()));
           return response;
         })
-        .catch(() => caches.match('./index.html'))
+        .catch(() => caches.match(event.request))
     );
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request).then(cached => cached || fetch(event.request).then(response => {
-      if (url.origin === self.location.origin && response.ok) {
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
-      }
-      return response;
-    }))
-  );
+  if (event.request.mode === 'navigate') {
+    event.respondWith(fetch(event.request).catch(() => caches.match('./index.html')));
+    return;
+  }
+
+  event.respondWith(caches.match(event.request).then(cached => cached || fetch(event.request)));
 });

@@ -1,56 +1,12 @@
-GRIDIRON INTEL — FUNCTION DIAGNOSTIC DEPLOY
+COMMANDERS PULSE — Notes
 
-Why this version exists:
-- Reddit browser requests are commonly blocked by CORS/network policy.
-- The app needs a server-side function at /.netlify/functions/reddit-search.
-- Drag/drop static deploys often publish index.html but do not reliably deploy serverless functions.
+This app is static and does not require Netlify Functions for the main pulse experience.
+The included health function is only a quick deployment check:
 
-Required files/folders:
-- index.html
-- sw.js
-- manifest.webmanifest
-- icon.svg
-- netlify.toml
-- netlify/functions/health.js
-- netlify/functions/reddit-search.js
-- package.json
+/.netlify/functions/health
 
-Best deployment method:
-1. Unzip this folder.
-2. Put the folder in a GitHub repository.
-3. In Netlify, choose Add new site > Import an existing project.
-4. Connect the GitHub repository.
-5. Build command: npm run build
-6. Publish directory: .
-7. Deploy.
+The community pulse data comes from GitHub Actions writing:
 
-After deployment, test this first:
-https://YOUR-SITE.netlify.app/.netlify/functions/health
+data/reddit-pulse.json
 
-Expected:
-{"ok":true,"service":"gridiron-intel-netlify-functions",...}
-
-Then test Reddit proxy:
-https://YOUR-SITE.netlify.app/.netlify/functions/reddit-search?subreddit=fantasyfootball&q=Ja%27Marr%20Chase&limit=3
-
-Expected:
-- A JSON array = proxy is working.
-- A JSON error object = function deployed, Reddit blocked upstream request.
-- HTML page / 404 / site homepage = function did not deploy.
-- Browser says Failed to fetch = function/network request did not reach the function.
-
-Important after redeploying:
-- Hard refresh the site.
-- Clear site data if the old service worker keeps the old version.
-- Remove/reinstall the PWA if it was installed to your phone home screen.
-
-UPDATE: HEALTH WORKS BUT REDDIT RETURNS 403
-If /.netlify/functions/health returns JSON, Netlify Functions are deployed. A 403 from reddit-search means Reddit is blocking the public JSON scan from Netlify's serverless IPs.
-
-This version adds optional Reddit OAuth support.
-Netlify environment variables to add:
-- REDDIT_CLIENT_ID
-- REDDIT_CLIENT_SECRET
-- REDDIT_USER_AGENT   (optional but recommended)
-
-After adding variables, trigger a fresh deploy and test health again. health should show redditOAuthConfigured: true.
+Run the Action manually after first deploy to populate the dashboard.

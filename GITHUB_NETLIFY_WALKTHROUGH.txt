@@ -1,63 +1,12 @@
-GRIDIRON INTEL — GITHUB TO NETLIFY WALKTHROUGH
+COMMANDERS PULSE — GitHub + Netlify Walkthrough
 
-PART 1 — CREATE THE GITHUB REPO
-1. Go to github.com and sign in.
-2. Click the + button in the top-right.
-3. Click New repository.
-4. Repository name: gridiron-intel
-5. Choose Private unless you want it public.
-6. Do NOT add README, .gitignore, or license. This ZIP already has what you need.
-7. Click Create repository.
+1. Upload / commit this folder to your GitHub repo.
+2. In Netlify, connect the GitHub repo or drag/drop this ZIP.
+3. Build command: npm run build
+4. Publish directory: .
+5. After deploy, go to GitHub → Actions → Build Commanders Pulse → Run workflow.
+6. The workflow commits data/reddit-pulse.json and data/reddit-pulse-history.json.
+7. Netlify should redeploy after the commit if the repo is connected.
+8. Refresh the site to see Fan Pulse, hot topics, player buzz, and community headlines.
 
-PART 2 — UPLOAD THE FILES
-1. Unzip this downloaded project ZIP on your computer.
-2. Open the unzipped folder.
-3. Make sure you see index.html, package.json, netlify.toml, and the netlify folder.
-4. In the empty GitHub repo page, click uploading an existing file.
-5. Drag ALL files and folders from inside the unzipped folder into GitHub.
-   Important: drag the contents inside the folder, not the folder itself.
-6. Wait for upload to finish.
-7. Commit message: Initial Gridiron Intel Netlify function build
-8. Click Commit changes.
-
-PART 3 — CONNECT GITHUB TO NETLIFY
-1. Go to app.netlify.com.
-2. Click Add new project or Add new site.
-3. Choose Import an existing project.
-4. Choose GitHub.
-5. Authorize Netlify if it asks.
-6. Select the gridiron-intel repository.
-7. Build settings:
-   - Build command: npm run build
-   - Publish directory: .
-   - Functions directory: netlify/functions
-8. Click Deploy.
-
-PART 4 — CONFIRM FUNCTIONS DEPLOYED
-1. Wait for the deploy to finish.
-2. Open your site URL.
-3. Test this URL first:
-   https://YOUR-SITE.netlify.app/.netlify/functions/health
-4. If that shows JSON with ok:true, functions are deployed.
-5. Then test:
-   https://YOUR-SITE.netlify.app/.netlify/functions/reddit-search?subreddit=fantasyfootball&q=Ja%27Marr%20Chase&limit=3
-
-PART 5 — CLEAR OLD CACHE
-1. Open the deployed app in Chrome.
-2. Press Cmd+Shift+R on Mac or Ctrl+Shift+R on Windows.
-3. If old behavior remains, open DevTools > Application > Storage > Clear site data.
-4. Reload.
-5. If using the phone home-screen PWA, delete the PWA and reinstall it after this deploy works.
-
-PART 6 — TEST IN THE APP
-1. Open the app.
-2. Open a player Deep Dive.
-3. Scroll to Fan Base Intel.
-4. Click Scan Player.
-5. If Reddit blocks upstream access, use Manual Paste fallback.
-
-
-Update 4.2 Navigation + Buzz:
-- Removed Deep from bottom nav; player cards now open Deep Dive as a contextual overlay.
-- Added Reddit Buzz Lens: automatic non-scraping buzz score from Sleeper trends, value gap, tags, role profile, and risk signals.
-- Added quick Reddit search links for team subreddit, r/fantasyfootball, and r/nfl manual research.
+No Reddit login/password is needed.

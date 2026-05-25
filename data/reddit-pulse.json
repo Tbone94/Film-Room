@@ -1,0 +1,33 @@
+{
+  "team": "WAS",
+  "team_name": "Washington Commanders",
+  "source_label": "Community Pulse",
+  "updated": null,
+  "updated_iso": null,
+  "posts_collected": 0,
+  "pulse": {
+    "score": 0,
+    "label": "No data yet",
+    "summary": "Run the Commanders Pulse scraper to populate community buzz.",
+    "posts_analyzed": 0,
+    "previous_score": null,
+    "score_delta": null,
+    "stale": true
+  },
+  "sentiment": {
+    "score": 0,
+    "label": "No data",
+    "posts_analyzed": 0,
+    "highlights_positive": [],
+    "highlights_negative": []
+  },
+  "hot_topics": [],
+  "player_mentions": [],
+  "highlights": { "positive": [], "negative": [] },
+  "recent_posts": [],
+  "errors": {},
+  "meta": {
+    "privacy_note": "Only public post metadata/titles and derived buzz scores are saved. Usernames and long selftext are intentionally omitted.",
+    "manual_fallback_available": true
+  }
+}

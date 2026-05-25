@@ -1,43 +1,14 @@
 {
-  "name": "Film Room",
-  "short_name": "Film Room",
-  "description": "Broadcast-style fantasy football draft command center with Film Room scoring and player intel.",
-  "start_url": "./",
-  "scope": "./",
+  "name": "Commanders Pulse",
+  "short_name": "WAS Pulse",
+  "description": "A Washington Commanders fan pulse dashboard powered by community chatter, hot topics, player buzz, and game-week mood signals.",
+  "start_url": ".",
   "display": "standalone",
-  "background_color": "#070a12",
-  "theme_color": "#070a12",
+  "background_color": "#12050a",
+  "theme_color": "#5a0b1f",
   "orientation": "portrait-primary",
   "icons": [
-    {
-      "src": "./assets/logo/logo-icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "./assets/logo/logo-icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "./assets/logo/logo-icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "./assets/logo/logo-icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "./icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    }
+    { "src": "assets/logo/logo-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "assets/logo/logo-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
   ]
 }

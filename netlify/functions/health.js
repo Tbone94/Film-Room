@@ -4,17 +4,13 @@ const headers = {
   'Access-Control-Allow-Origin': '*',
 };
 
-exports.handler = async () => {
-  return {
-    statusCode: 200,
-    headers,
-    body: JSON.stringify({
-      ok: true,
-      service: 'gridiron-intel-netlify-functions',
-      message: 'Netlify Functions are deployed.',
-      redditOAuthConfigured: Boolean(process.env.REDDIT_CLIENT_ID && process.env.REDDIT_CLIENT_SECRET),
-      hasRedditUserAgent: Boolean(process.env.REDDIT_USER_AGENT),
-      timestamp: new Date().toISOString(),
-    }),
-  };
-};
+exports.handler = async () => ({
+  statusCode: 200,
+  headers,
+  body: JSON.stringify({
+    ok: true,
+    service: 'commanders-pulse-functions',
+    message: 'Commanders Pulse Netlify Functions are deployed.',
+    timestamp: new Date().toISOString(),
+  }),
+});
