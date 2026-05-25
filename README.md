@@ -56,3 +56,8 @@ This build swaps out the old Film Room imagery and uses the newer custom burgund
 ## Netlify dependency note
 
 There is intentionally no root `requirements.txt` file in this build. Netlify should only run the static app build. The GitHub Action scraper uses Python standard-library public Reddit JSON requests, so it does not need `yars` or any pip dependency install.
+
+
+## Data refresh v1.4
+
+The refresh workflow now uses a no-dependency Python scraper with PullPush first, old.reddit RSS second, and Reddit RSS/JSON/HTML fallbacks. It prints source_status in the GitHub Action log so zero-post runs can be diagnosed.
