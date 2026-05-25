@@ -3,40 +3,51 @@
 Commanders Pulse Builder
 
 Builds data/reddit-pulse.json from public community discussion signals.
-Designed to run in GitHub Actions. No Reddit account, OAuth token, or API key is required.
+Designed to run in GitHub Actions. No Reddit account, OAuth token, API key,
+or pip dependency is required.
 
-Notes:
-- This is a best-effort community buzz signal, not a factual truth source.
-- The output intentionally avoids storing usernames and long post bodies.
-- If Reddit public JSON requests fail, the script still writes a valid JSON file with error details.
+v1.2 reliability notes:
+- Uses Reddit RSS feeds first because GitHub/Netlify environments often get
+  blocked or throttled by Reddit's public JSON endpoints.
+- Falls back to Reddit JSON endpoints if RSS is unavailable.
+- Writes clear source/debug errors into data/reddit-pulse.json when collection
+  fails, so the next failure is diagnosable from the file itself.
 """
 
 from __future__ import annotations
 
+import email.utils
+import html
 import json
 import os
 import re
-import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
+import xml.etree.ElementTree as ET
 from collections import defaultdict
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 OUTPUT_PATH = "data/reddit-pulse.json"
 HISTORY_PATH = "data/reddit-pulse-history.json"
 TEAM_ID_ESPN = 28
-DELAY_BETWEEN_REQUESTS = 3
+DELAY_BETWEEN_REQUESTS = 1.2
 SELFTEXT_MAX = 280
 STALE_AFTER_HOURS = 72
-REDDIT_USER_AGENT = "CommandersPulse/1.0 by tgiamberini95"
+
+# A browser-like UA is more reliable for public RSS/JSON reads from GitHub Actions.
+REDDIT_USER_AGENT = (
+    "Mozilla/5.0 (compatible; CommandersPulse/1.2; "
+    "+https://github.com/tgiamberini95/commanders-pulse)"
+)
 
 SUBS_TO_SCAN = [
     {
         "key": "commanders",
         "subreddit": "Commanders",
         "fetch_categories": ["hot", "new", "top"],
-        "fetch_limit": 30,
+        "fetch_limit": 35,
         "search_queries": [
             "Jayden Daniels",
             "Commanders draft",
@@ -70,7 +81,6 @@ SUBS_TO_SCAN = [
     },
 ]
 
-# Sports-fan language is noisy/sarcastic. This intentionally measures buzz mood, not truth.
 STRONG_POSITIVE = [
     "elite", "beast", "monster", "stud", "generational", "franchise", "pro bowl",
     "all pro", "dominant", "unstoppable", "clutch", "goat", "mvp", "breakout",
@@ -128,7 +138,8 @@ FALLBACK_PLAYERS = {
 
 
 def clean_text(value: Any, max_len: int = 240) -> str:
-    text = str(value or "").replace("\n", " ").strip()
+    text = html.unescape(str(value or "")).replace("\n", " ").strip()
+    text = re.sub(r"<[^>]+>", " ", text)
     text = re.sub(r"\s+", " ", text)
     return text[:max_len]
 
@@ -165,21 +176,34 @@ def write_json(path: str, payload: Any) -> None:
         json.dump(payload, f, indent=2, ensure_ascii=False)
 
 
+def request_text(url: str, accept: str = "*/*") -> str:
+    req = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": REDDIT_USER_AGENT,
+            "Accept": accept,
+            "Accept-Language": "en-US,en;q=0.9",
+            "Cache-Control": "no-cache",
+        },
+    )
+    with urllib.request.urlopen(req, timeout=20) as response:
+        charset = response.headers.get_content_charset() or "utf-8"
+        return response.read().decode(charset, errors="replace")
+
+
 def fetch_current_roster() -> Dict[str, str]:
     """Fetch current Commanders roster from ESPN public endpoint. Falls back safely."""
     url = f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/{TEAM_ID_ESPN}?enable=roster"
     roster = dict(FALLBACK_PLAYERS)
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "CommandersPulseBot/1.0"})
-        with urllib.request.urlopen(req, timeout=12) as response:
-            data = json.loads(response.read().decode("utf-8"))
+        text = request_text(url, accept="application/json")
+        data = json.loads(text)
         athletes = data.get("team", {}).get("athletes", []) or data.get("athletes", [])
         for item in athletes:
             name = clean_text(item.get("displayName") or item.get("fullName"), 80)
             if not name or " " not in name:
                 continue
             last = name.split()[-1].lower().replace(".", "")
-            # Skip highly ambiguous one-word matches unless already useful as curated fallback.
             if len(last) >= 4:
                 roster[last] = name
         print(f"Roster loaded: {len(roster)} player/name keys")
@@ -202,7 +226,7 @@ def normalize_post(post: Any) -> Optional[Dict[str, Any]]:
 
     return {
         "title": title,
-        "selftext": clean_text(post.get("selftext") or post.get("body"), SELFTEXT_MAX),
+        "selftext": clean_text(post.get("selftext") or post.get("body") or post.get("summary"), SELFTEXT_MAX),
         "score": safe_int(post.get("score")),
         "comments": safe_int(post.get("num_comments") or post.get("comments")),
         "created": safe_float(post.get("created_utc") or post.get("created")),
@@ -223,6 +247,166 @@ def deduplicate(posts: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return unique
 
 
+def rss_time_to_epoch(value: str) -> float:
+    if not value:
+        return 0.0
+    try:
+        dt = email.utils.parsedate_to_datetime(value)
+        return dt.timestamp()
+    except Exception:
+        try:
+            cleaned = value.replace("Z", "+00:00")
+            from datetime import datetime
+            return datetime.fromisoformat(cleaned).timestamp()
+        except Exception:
+            return 0.0
+
+
+def strip_reddit_title_prefix(title: str) -> str:
+    # Reddit search feeds sometimes prepend subreddit/user context. Keep this conservative.
+    return clean_text(title.replace(" - Reddit", ""), 220)
+
+
+def parse_reddit_rss(xml_text: str, subreddit: str, source_category: str) -> List[Dict[str, Any]]:
+    posts: List[Dict[str, Any]] = []
+    root = ET.fromstring(xml_text)
+    ns = {
+        "atom": "http://www.w3.org/2005/Atom",
+        "media": "http://search.yahoo.com/mrss/",
+    }
+
+    # Reddit .rss currently uses Atom entries.
+    entries = root.findall("atom:entry", ns)
+    if not entries:
+        entries = root.findall(".//entry")
+
+    for entry in entries:
+        def find_text(*names: str) -> str:
+            for name in names:
+                node = entry.find(name, ns) if ":" in name else entry.find(name)
+                if node is not None and node.text:
+                    return node.text
+            return ""
+
+        title = strip_reddit_title_prefix(find_text("atom:title", "title"))
+        summary = clean_text(find_text("atom:content", "atom:summary", "summary", "description"), SELFTEXT_MAX)
+        link = ""
+        for link_node in entry.findall("atom:link", ns) + entry.findall("link"):
+            href = link_node.attrib.get("href")
+            rel = link_node.attrib.get("rel", "alternate")
+            if href and rel in ("alternate", ""):
+                link = href
+                break
+        if not link:
+            link = find_text("atom:id", "id")
+        created = rss_time_to_epoch(find_text("atom:updated", "atom:published", "updated", "pubDate"))
+        normalized = normalize_post({
+            "title": title,
+            "selftext": summary,
+            "score": 0,
+            "comments": 0,
+            "created_utc": created,
+            "url": link,
+            "subreddit": subreddit,
+            "flair": "",
+        })
+        if normalized:
+            normalized["source_category"] = source_category
+            normalized["source_type"] = "rss"
+            posts.append(normalized)
+    return posts
+
+
+def children_to_posts(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+    children = payload.get("data", {}).get("children", [])
+    posts = []
+    for child in children:
+        if isinstance(child, dict) and isinstance(child.get("data"), dict):
+            posts.append(child["data"])
+    return posts
+
+
+def fetch_json_posts(url: str) -> List[Dict[str, Any]]:
+    text = request_text(url, accept="application/json,text/plain,*/*")
+    return children_to_posts(json.loads(text))
+
+
+def reddit_rss_urls_for_category(subreddit: str, category: str, limit: int) -> List[str]:
+    category = category.lower().strip()
+    if category == "hot":
+        paths = [".rss", "hot/.rss"]
+    elif category == "new":
+        paths = ["new/.rss"]
+    elif category == "top":
+        paths = ["top/.rss?t=week"]
+    else:
+        paths = [f"{category}/.rss"]
+    return [f"https://www.reddit.com/r/{subreddit}/{path}" for path in paths]
+
+
+def reddit_json_urls_for_category(subreddit: str, category: str, limit: int) -> List[str]:
+    category = category.lower().strip()
+    time_query = "&t=week" if category == "top" else ""
+    return [
+        f"https://www.reddit.com/r/{subreddit}/{category}.json?limit={int(limit)}{time_query}",
+        f"https://old.reddit.com/r/{subreddit}/{category}.json?limit={int(limit)}{time_query}",
+    ]
+
+
+def reddit_rss_urls_for_search(subreddit: str, query: str, limit: int) -> List[str]:
+    encoded = urllib.parse.quote_plus(query)
+    return [
+        f"https://www.reddit.com/r/{subreddit}/search.rss?q={encoded}&restrict_sr=on&sort=relevance&t=week&limit={int(limit)}",
+        f"https://old.reddit.com/r/{subreddit}/search.rss?q={encoded}&restrict_sr=on&sort=relevance&t=week&limit={int(limit)}",
+    ]
+
+
+def reddit_json_urls_for_search(subreddit: str, query: str, limit: int) -> List[str]:
+    encoded = urllib.parse.quote_plus(query)
+    return [
+        f"https://www.reddit.com/r/{subreddit}/search.json?q={encoded}&restrict_sr=1&sort=relevance&t=week&limit={int(limit)}",
+        f"https://old.reddit.com/r/{subreddit}/search.json?q={encoded}&restrict_sr=1&sort=relevance&t=week&limit={int(limit)}",
+    ]
+
+
+def fetch_from_many(urls: List[str], subreddit: str, source_category: str, limit: int) -> Tuple[List[Dict[str, Any]], List[str]]:
+    errors: List[str] = []
+    for url in urls:
+        try:
+            if url.endswith(".rss") or ".rss?" in url or "/.rss" in url:
+                text = request_text(url, accept="application/atom+xml,application/rss+xml,text/xml,*/*")
+                posts = parse_reddit_rss(text, subreddit, source_category)
+            else:
+                posts = []
+                for item in fetch_json_posts(url):
+                    normalized = normalize_post(item)
+                    if normalized:
+                        normalized["source_category"] = source_category
+                        normalized["source_type"] = "json"
+                        posts.append(normalized)
+            if posts:
+                return posts[:limit], errors
+            errors.append(f"0 posts from {url}")
+        except urllib.error.HTTPError as exc:
+            errors.append(f"HTTP {exc.code} from {url}")
+        except Exception as exc:
+            errors.append(f"{type(exc).__name__}: {str(exc)[:120]} from {url}")
+        time.sleep(DELAY_BETWEEN_REQUESTS)
+    return [], errors
+
+
+def fetch_subreddit_category(subreddit: str, category: str, limit: int) -> Tuple[List[Dict[str, Any]], List[str]]:
+    rss_urls = reddit_rss_urls_for_category(subreddit, category, limit)
+    json_urls = reddit_json_urls_for_category(subreddit, category, limit)
+    return fetch_from_many(rss_urls + json_urls, subreddit, category, limit)
+
+
+def search_subreddit(subreddit: str, query: str, limit: int) -> Tuple[List[Dict[str, Any]], List[str]]:
+    rss_urls = reddit_rss_urls_for_search(subreddit, query, limit)
+    json_urls = reddit_json_urls_for_search(subreddit, query, limit)
+    return fetch_from_many(rss_urls + json_urls, subreddit, f"search:{query}", limit)
+
+
 def score_post_text(text: str) -> int:
     lowered = f" {text.lower()} "
     score = 0
@@ -238,8 +422,6 @@ def score_post_text(text: str) -> int:
     for word in STRONG_NEGATIVE:
         if word in lowered:
             score -= 3
-
-    # Context fixes for common sports slang ambiguity.
     if " fire " in lowered and not re.search(r"fire\s+(the\s+)?(coach|gm|coordinator|quinn|peters|staff)", lowered):
         score += 1
     if re.search(r"fire\s+(the\s+)?(coach|gm|coordinator|quinn|peters|staff)", lowered):
@@ -253,13 +435,7 @@ def score_post_text(text: str) -> int:
 
 def analyze_sentiment(posts: List[Dict[str, Any]]) -> Dict[str, Any]:
     if not posts:
-        return {
-            "score": 0,
-            "label": "No data",
-            "posts_analyzed": 0,
-            "highlights_positive": [],
-            "highlights_negative": [],
-        }
+        return {"score": 0, "label": "No data", "posts_analyzed": 0, "highlights_positive": [], "highlights_negative": []}
 
     total_score = 0.0
     total_weight = 0.0
@@ -273,20 +449,14 @@ def analyze_sentiment(posts: List[Dict[str, Any]]) -> Dict[str, Any]:
         total_score += ps * engagement
         total_weight += engagement
 
-        highlight = {
-            "title": post.get("title", "")[:140],
-            "score": post.get("score", 0),
-            "comments": post.get("comments", 0),
-            "url": post.get("url", ""),
-        }
-        if ps >= 3 and post.get("score", 0) >= 2:
+        highlight = {"title": post.get("title", "")[:140], "score": post.get("score", 0), "comments": post.get("comments", 0), "url": post.get("url", "")}
+        if ps >= 2:
             highlights_pos.append(highlight)
-        if ps <= -3 and post.get("score", 0) >= 2:
+        if ps <= -2:
             highlights_neg.append(highlight)
 
     raw = total_score / max(0.01, total_weight) * 10
     clamped = max(-100, min(100, round(raw)))
-
     if clamped >= 50:
         label = "EXTREMELY FIRED UP"
     elif clamped >= 25:
@@ -306,71 +476,46 @@ def analyze_sentiment(posts: List[Dict[str, Any]]) -> Dict[str, Any]:
         "score": clamped,
         "label": label,
         "posts_analyzed": len(posts),
-        "highlights_positive": sorted(highlights_pos, key=lambda x: -(x["score"] + x["comments"]))[:5],
-        "highlights_negative": sorted(highlights_neg, key=lambda x: -(x["score"] + x["comments"]))[:5],
+        "highlights_positive": highlights_pos[:5],
+        "highlights_negative": highlights_neg[:5],
     }
 
 
-def detect_hot_topics(posts: List[Dict[str, Any]], min_posts: int = 2) -> List[Dict[str, Any]]:
+def detect_hot_topics(posts: List[Dict[str, Any]], min_posts: int = 1) -> List[Dict[str, Any]]:
     topic_scores: Dict[str, int] = {}
     topic_posts: Dict[str, list] = defaultdict(list)
-
     for post in posts:
         text = f"{post.get('title', '')} {post.get('selftext', '')}".lower()
         for topic, keywords in TOPIC_KEYWORDS.items():
             if any(keyword in text for keyword in keywords):
                 engagement = safe_int(post.get("score")) + safe_int(post.get("comments"))
                 topic_scores[topic] = topic_scores.get(topic, 0) + engagement + 10
-                topic_posts[topic].append({
-                    "title": post.get("title", "")[:140],
-                    "score": post.get("score", 0),
-                    "comments": post.get("comments", 0),
-                    "url": post.get("url", ""),
-                })
-
+                topic_posts[topic].append({"title": post.get("title", "")[:140], "score": post.get("score", 0), "comments": post.get("comments", 0), "url": post.get("url", "")})
     hot = []
     for topic, score in sorted(topic_scores.items(), key=lambda item: -item[1]):
         posts_for_topic = topic_posts[topic]
         if len(posts_for_topic) >= min_posts:
-            hot.append({
-                "topic": topic,
-                "buzz_score": score,
-                "post_count": len(posts_for_topic),
-                "top_posts": sorted(posts_for_topic, key=lambda x: -(x["score"] + x["comments"]))[:3],
-            })
+            hot.append({"topic": topic, "buzz_score": score, "post_count": len(posts_for_topic), "top_posts": posts_for_topic[:3]})
     return hot[:8]
 
 
 def track_player_mentions(posts: List[Dict[str, Any]], roster: Dict[str, str]) -> List[Dict[str, Any]]:
     mentions = defaultdict(lambda: {"count": 0, "sentiment": 0, "posts": []})
-
     for post in posts:
         text = f"{post.get('title', '')} {post.get('selftext', '')}"
         lowered = text.lower()
         post_score = score_post_text(text)
-
         for key, full_name in roster.items():
-            # Use word boundaries for last names to reduce accidental matches.
             if re.search(rf"\b{re.escape(key.lower())}\b", lowered) or full_name.lower() in lowered:
                 item = mentions[full_name]
                 item["count"] += 1
                 item["sentiment"] += post_score
                 if len(item["posts"]) < 3:
-                    item["posts"].append({
-                        "title": post.get("title", "")[:140],
-                        "score": post.get("score", 0),
-                        "url": post.get("url", ""),
-                    })
-
+                    item["posts"].append({"title": post.get("title", "")[:140], "score": post.get("score", 0), "url": post.get("url", "")})
     result = []
     for full_name, data in sorted(mentions.items(), key=lambda item: -item[1]["count"]):
         avg_sentiment = round(data["sentiment"] / max(1, data["count"]) * 10)
-        result.append({
-            "player": full_name,
-            "mentions": data["count"],
-            "sentiment": max(-100, min(100, avg_sentiment)),
-            "top_posts": data["posts"],
-        })
+        result.append({"player": full_name, "mentions": data["count"], "sentiment": max(-100, min(100, avg_sentiment)), "top_posts": data["posts"]})
     return result[:20]
 
 
@@ -378,7 +523,6 @@ def generate_pulse_summary(sentiment: Dict[str, Any], hot_topics: List[Dict[str,
     score = sentiment.get("score", 0)
     top_topic = hot_topics[0]["topic"] if hot_topics else "the team"
     top_player = player_mentions[0]["player"] if player_mentions else None
-
     if score >= 40:
         summary = f"The fan base is buzzing, with {top_topic} driving the conversation."
     elif score >= 15:
@@ -389,108 +533,33 @@ def generate_pulse_summary(sentiment: Dict[str, Any], hot_topics: List[Dict[str,
         summary = f"Fans are restless, and concerns around {top_topic} are showing up."
     else:
         summary = f"Frustration is high, with {top_topic} taking the most heat."
-
     if top_player:
         summary += f" {top_player.split()[-1]} is one of the loudest player buzz signals."
     return summary
 
 
-def reddit_request(url: str) -> Dict[str, Any]:
-    """Fetch a Reddit public JSON endpoint using only the Python standard library."""
-    request = urllib.request.Request(
-        url,
-        headers={
-            "User-Agent": REDDIT_USER_AGENT,
-            "Accept": "application/json",
-        },
-    )
-    with urllib.request.urlopen(request, timeout=18) as response:
-        charset = response.headers.get_content_charset() or "utf-8"
-        return json.loads(response.read().decode(charset, errors="replace"))
-
-
-def children_to_posts(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
-    children = payload.get("data", {}).get("children", [])
-    posts = []
-    for child in children:
-        if not isinstance(child, dict):
-            continue
-        data = child.get("data")
-        if isinstance(data, dict):
-            posts.append(data)
-    return posts
-
-
-def fetch_subreddit_category(subreddit: str, category: str, limit: int) -> List[Dict[str, Any]]:
-    category = category.lower().strip()
-    time_query = "&t=week" if category == "top" else ""
-    url = f"https://www.reddit.com/r/{subreddit}/{category}.json?limit={int(limit)}{time_query}"
-    return children_to_posts(reddit_request(url))
-
-
-def search_subreddit(subreddit: str, query: str, limit: int) -> List[Dict[str, Any]]:
-    encoded_query = urllib.parse.quote_plus(query)
-    url = (
-        f"https://www.reddit.com/r/{subreddit}/search.json"
-        f"?q={encoded_query}&restrict_sr=1&sort=relevance&t=week&limit={int(limit)}"
-    )
-    return children_to_posts(reddit_request(url))
-
-
 def scrape_subreddit(config: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], List[str]]:
     posts: List[Dict[str, Any]] = []
     errors: List[str] = []
-
     for category in config.get("fetch_categories", []):
-        try:
-            raw = fetch_subreddit_category(
-                config["subreddit"],
-                category,
-                config.get("fetch_limit", 25),
-            )
-            for item in raw or []:
-                normalized = normalize_post(item)
-                if normalized:
-                    normalized["source_category"] = category
-                    posts.append(normalized)
-            print(f"    {category}: {len(raw or [])} posts")
-        except Exception as exc:
-            message = f"{category}: {str(exc)[:160]}"
-            errors.append(message)
-            print(f"    {category}: FAILED — {str(exc)[:80]}")
+        raw, fetch_errors = fetch_subreddit_category(config["subreddit"], category, config.get("fetch_limit", 25))
+        errors.extend([f"{category}: {err}" for err in fetch_errors])
+        posts.extend(raw)
+        print(f"    {category}: {len(raw or [])} posts")
         time.sleep(DELAY_BETWEEN_REQUESTS)
-
     for query in config.get("search_queries", []):
-        try:
-            raw = search_subreddit(
-                config["subreddit"],
-                query,
-                config.get("search_limit", 10),
-            )
-            for item in raw or []:
-                normalized = normalize_post(item)
-                if not normalized:
-                    continue
-                subreddit = (normalized.get("subreddit") or "").lower()
-                target = config["subreddit"].lower()
-                if subreddit == target:
-                    normalized["source_category"] = f"search:{query}"
-                    posts.append(normalized)
-            print(f"    search '{query}': {len(raw or [])} results")
-        except Exception as exc:
-            message = f"search '{query}': {str(exc)[:160]}"
-            errors.append(message)
-            print(f"    search '{query}': FAILED — {str(exc)[:80]}")
+        raw, fetch_errors = search_subreddit(config["subreddit"], query, config.get("search_limit", 10))
+        errors.extend([f"search '{query}': {err}" for err in fetch_errors])
+        posts.extend(raw)
+        print(f"    search '{query}': {len(raw or [])} posts")
         time.sleep(DELAY_BETWEEN_REQUESTS)
-
-    return deduplicate(posts), errors
+    return deduplicate(posts), errors[:30]
 
 
 def update_history(output: Dict[str, Any]) -> Dict[str, Any]:
     history = load_json(HISTORY_PATH, [])
     if not isinstance(history, list):
         history = []
-
     history.append({
         "updated": output.get("updated"),
         "updated_iso": output.get("updated_iso"),
@@ -508,41 +577,42 @@ def update_history(output: Dict[str, Any]) -> Dict[str, Any]:
 def build_failure_output(errors: Dict[str, Any]) -> Dict[str, Any]:
     previous = load_json(OUTPUT_PATH, {})
     now = time.time()
+    previous_pulse = previous.get("pulse", {}) if isinstance(previous, dict) else {}
     return {
         "team": "WAS",
         "team_name": "Washington Commanders",
         "source_label": "Community Pulse",
-        "updated": previous.get("updated"),
-        "updated_iso": previous.get("updated_iso"),
+        "updated": previous.get("updated") if isinstance(previous, dict) else None,
+        "updated_iso": previous.get("updated_iso") if isinstance(previous, dict) else None,
         "last_attempted_iso": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now)),
-        "posts_collected": previous.get("posts_collected", 0),
+        "posts_collected": previous.get("posts_collected", 0) if isinstance(previous, dict) else 0,
         "pulse": {
-            **previous.get("pulse", {}),
+            **previous_pulse,
             "stale": True,
-            "summary": previous.get("pulse", {}).get("summary") or "Community Pulse data is temporarily unavailable.",
+            "summary": previous_pulse.get("summary") or "Community Pulse data is temporarily unavailable. Check errors.source_debug in data/reddit-pulse.json.",
+            "stale_after_hours": STALE_AFTER_HOURS,
         },
-        "sentiment": previous.get("sentiment", {}),
-        "hot_topics": previous.get("hot_topics", []),
-        "player_mentions": previous.get("player_mentions", []),
-        "highlights": previous.get("highlights", {"positive": [], "negative": []}),
-        "recent_posts": previous.get("recent_posts", []),
+        "sentiment": previous.get("sentiment", {}) if isinstance(previous, dict) else {},
+        "hot_topics": previous.get("hot_topics", []) if isinstance(previous, dict) else [],
+        "player_mentions": previous.get("player_mentions", []) if isinstance(previous, dict) else [],
+        "highlights": previous.get("highlights", {"positive": [], "negative": []}) if isinstance(previous, dict) else {"positive": [], "negative": []},
+        "recent_posts": previous.get("recent_posts", []) if isinstance(previous, dict) else [],
         "errors": errors,
         "meta": {
             "privacy_note": "Only public post metadata/titles and derived buzz scores are saved. Usernames and long selftext are intentionally omitted.",
             "manual_fallback_available": True,
+            "debug_note": "RSS is tried first, Reddit JSON second. HTTP 403/429 means Reddit is blocking that runner/request.",
         },
     }
 
 
 def main() -> None:
     print("=" * 64)
-    print("COMMANDERS PULSE BUILDER")
+    print("COMMANDERS PULSE BUILDER — RSS-FIRST")
     print("=" * 64)
-
     previous = load_json(OUTPUT_PATH, {})
     previous_score = previous.get("pulse", {}).get("score") if isinstance(previous, dict) else None
     roster = fetch_current_roster()
-
     all_posts: List[Dict[str, Any]] = []
     all_errors: Dict[str, Any] = {}
 
@@ -558,7 +628,7 @@ def main() -> None:
     print(f"\nTotal unique posts: {len(all_posts)}")
 
     if not all_posts:
-        output = build_failure_output({**all_errors, "fatal": "No posts collected"})
+        output = build_failure_output({**all_errors, "fatal": "No posts collected", "last_attempted_iso": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())})
         write_json(OUTPUT_PATH, output)
         print(f"No posts collected. Wrote fallback output to {OUTPUT_PATH}")
         return
@@ -578,6 +648,7 @@ def main() -> None:
         "source_label": "Community Pulse",
         "updated": now,
         "updated_iso": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now)),
+        "last_attempted_iso": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now)),
         "posts_collected": len(all_posts),
         "pulse": {
             "score": score,
@@ -592,19 +663,16 @@ def main() -> None:
         "sentiment": sentiment,
         "hot_topics": hot_topics,
         "player_mentions": player_mentions,
-        "highlights": {
-            "positive": sentiment["highlights_positive"],
-            "negative": sentiment["highlights_negative"],
-        },
+        "highlights": {"positive": sentiment["highlights_positive"], "negative": sentiment["highlights_negative"]},
         "recent_posts": sorted(all_posts, key=lambda item: -safe_float(item.get("created")))[:50],
         "errors": all_errors,
         "meta": {
             "privacy_note": "Only public post metadata/titles and derived buzz scores are saved. Usernames and long selftext are intentionally omitted.",
             "manual_fallback_available": True,
             "signal_note": "This is a fan conversation signal, not an official team report or factual player evaluation.",
+            "source_strategy": "Reddit RSS first, Reddit JSON fallback, no API key.",
         },
     }
-
     output = update_history(output)
     write_json(OUTPUT_PATH, output)
 
