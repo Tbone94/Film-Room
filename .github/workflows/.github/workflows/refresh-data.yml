@@ -1,8 +1,10 @@
-name: Refresh Film Room Data
+name: Build Commanders Pulse
 
 on:
   schedule:
     - cron: "0 12 * * *"
+    - cron: "0 22 * * 0"
+    - cron: "0 4 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -12,22 +14,42 @@ jobs:
   refresh:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
+      - name: Run Commanders Pulse scraper
+        run: python3 scripts/scrape-commanders-reddit.py
 
-      - name: Install dependencies
-        run: npm install
+      - name: Show pulse data summary
+        run: |
+          python3 - <<'PY'
+          import json
 
-      - name: Fetch and merge data sources
-        run: npm run refresh:data
+          with open("data/reddit-pulse.json", "r", encoding="utf-8") as f:
+              data = json.load(f)
 
-      - name: Commit updated data
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "Auto-refresh Film Room data"
-          file_pattern: data/players.json
+          print("posts_collected:", data.get("posts_collected"))
+          print("updated_iso:", data.get("updated_iso"))
+          print("last_attempted_iso:", data.get("last_attempted_iso"))
+          print("pulse:", json.dumps(data.get("pulse", {}), indent=2))
+          print("errors:", json.dumps(data.get("errors", {}), indent=2))
+          print("source_status:", json.dumps(data.get("meta", {}).get("source_status", {}), indent=2)[:12000])
+          PY
+
+      - name: Commit updated pulse data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add data/reddit-pulse.json data/reddit-pulse-history.json
+
+          if git diff --cached --quiet; then
+            echo "No pulse data changes to commit."
+          else
+            git commit -m "Auto-refresh Commanders Pulse data"
+            git push
+          fi
