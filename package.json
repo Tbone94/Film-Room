@@ -5,10 +5,13 @@
   "description": "Commanders Pulse static fan dashboard with GitHub Actions community-pulse data generation.",
   "scripts": {
     "build": "node -e \"console.log('Commanders Pulse static build: no bundling required')\"",
-    "scrape:reddit": "python scripts/scrape-commanders-reddit.py"
+    "scrape:reddit": "python scripts/scrape-commanders-reddit.py",
+    "refresh:data": "python scripts/scrape-commanders-reddit.py",
+    "refresh": "npm run refresh:data",
+    "build:data": "python scripts/scrape-commanders-reddit.py"
   },
   "engines": {
-    "node": "20.x"
+    "node": ">=20"
   },
   "type": "module"
 }
